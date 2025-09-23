@@ -2,7 +2,7 @@ export const BACKGROUND_THEMES = {
   // Gradients & Atmospheres
   cosmic_dust: {
     name: 'Cosmic Dust',
-    style: 'radial-gradient(ellipse at center, #1a1f36 0%, #0a0e1a 70%)',
+    style: 'radial-gradient(ellipse at center, rgba(26, 31, 54, 0.6) 0%, transparent 70%)',
   },
   northern_lights: {
     name: 'Northern Lights',

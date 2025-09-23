@@ -15,7 +15,7 @@
   --accent-bright: #9a9aff;
   --error: #ef4444;
   --success: #10b981;
-  --font-title: "Playfair Display", "Times New Roman", serif;
+  --font-title: Georgia, serif;
   --font-body: "IBM Plex Mono", "SFMono-Regular", monospace;
   --font-body-size: 15px;
   --font-date-size: 12px;
@@ -110,9 +110,9 @@ body::after {
 
 /* Typography */
 h1 {
-  font-size: 2.5rem;
-  font-weight: 300;
-  letter-spacing: -0.02em;
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   font-family: var(--font-title);
   color: var(--text-primary);
 }
@@ -288,6 +288,10 @@ textarea {
   border-radius: 9999px;
   padding: 0.55rem 1.6rem;
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-soft:hover:not(:disabled) {
@@ -301,9 +305,12 @@ textarea {
 }
 
 .btn-soft:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
   background: linear-gradient(135deg, rgba(74, 82, 120, 0.25), rgba(58, 64, 102, 0.35));
+}
+
+.btn-soft.btn-full {
+  width: 100%;
 }
 
 .btn-outline {
@@ -314,8 +321,10 @@ textarea {
   padding: 0.4rem 1.1rem;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   transition: background var(--transition-base), border var(--transition-base), transform var(--transition-base);
+  cursor: pointer;
 }
 
 .btn-outline:hover:not(:disabled) {
@@ -329,12 +338,16 @@ textarea {
   transform: translateY(0);
 }
 
+.btn-outline:disabled {
+  cursor: not-allowed;
+}
+
 .settings-section {
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.7rem;
   color: rgba(210, 214, 239, 0.55);
-  margin-bottom: 0.6rem;
+  margin-bottom: 1.5rem;
 }
 
 /* Messages */

@@ -10,7 +10,6 @@ import {
   LogOut,
   Search,
   X,
-  ExternalLink,
   PenSquare,
   ScrollText,
   Cog,
@@ -35,6 +34,7 @@ interface Post {
   date: string;
   icon?: string | null;
   color?: IconColorName;
+  isDraft?: boolean;
 }
 
 interface Settings {
@@ -62,12 +62,13 @@ export default function AdminPage() {
     return today.toISOString().split('T')[0];
   });
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [activeTab, setActiveTab] = useState<'whispers' | 'new' | 'profile' | 'admin'>('new');
+  const [activeTab, setActiveTab] = useState<'drafts' | 'published' | 'new' | 'profile' | 'admin'>('new');
 
   // Settings form
-  const [editTitle, setEditTitle] = useState('My Whispers');
+  const [editTitle, setEditTitle] = useState('');
   const [asciiArt, setAsciiArt] = useState('');
   const [trackingSnippet, setTrackingSnippet] = useState('');
   const [selectedTheme, setSelectedTheme] = useState<BackgroundThemeKey>(DEFAULT_BACKGROUND_THEME);
@@ -187,11 +188,11 @@ export default function AdminPage() {
     return <IconComponent size={props?.size ?? 20} strokeWidth={props?.strokeWidth ?? 1.6} />;
   };
 
-const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; label: string; icon: LucideIcon }> = useMemo(
+const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | 'admin'; label: string; icon: LucideIcon }> = useMemo(
   () => [
     { id: 'new', label: 'Compose', icon: PenSquare },
-    { id: 'whispers', label: 'Whispers', icon: ScrollText },
-    { id: 'profile', label: 'Profile', icon: Cog },
+    { id: 'drafts', label: 'Drafts', icon: icons.MoonStar },
+    { id: 'published', label: 'Published', icon: icons.MoonStar },
   ],
   []
 );
@@ -202,6 +203,7 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
     date: post.date,
     icon: typeof post.icon === 'string' && post.icon.length ? post.icon : null,
     color: isValidIconColor(post.color) ? (post.color as IconColorName) : DEFAULT_ICON_COLOR,
+    isDraft: post.isDraft || false,
   });
 
   const resetComposer = () => {
@@ -216,9 +218,11 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
 
   useEffect(() => {
     resetComposer();
-    checkAuth();
-    fetchPosts();
-    fetchSettings();
+    Promise.all([
+      checkAuth(),
+      fetchPosts(),
+      fetchSettings()
+    ]).finally(() => setInitialLoading(false));
   }, []);
 
   const checkAuth = async () => {
@@ -264,7 +268,7 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch('/api/posts', {
+      const res = await fetch('/api/posts?includeDrafts=true', {
         credentials: 'include',
         cache: 'no-store',
       });
@@ -277,7 +281,7 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
     }
   };
 
-  const handleSavePost = async (e: React.FormEvent) => {
+  const handleSavePost = async (e: React.FormEvent | React.MouseEvent, isDraft: boolean = false) => {
     e.preventDefault();
     setError('');
 
@@ -294,7 +298,10 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
         date: postDate ? new Date(postDate + 'T00:00:00').toISOString() : new Date().toISOString(),
         icon: selectedIcon,
         color: selectedColor,
+        isDraft,
       };
+
+      console.log('Saving post with isDraft:', isDraft, 'Payload:', payload);
 
       const wasEditing = Boolean(editingPost);
 
@@ -311,7 +318,7 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
           throw new Error(data.error || 'Failed to update whisper');
         }
 
-        setToast({ message: 'Whisper updated', type: 'success' });
+        setToast({ message: editingPost.isDraft && !isDraft ? 'Published' : 'Updated', type: 'success' });
       } else {
         const res = await fetch('/api/posts', {
           method: 'POST',
@@ -325,14 +332,12 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
           throw new Error(data.error || 'Failed to create whisper');
         }
 
-        setToast({ message: 'Whisper sent', type: 'success' });
+        setToast({ message: isDraft ? 'Saved as draft' : 'Published', type: 'success' });
       }
 
       resetComposer();
       fetchPosts();
-      if (wasEditing) {
-        setActiveTab('whispers');
-      }
+      setActiveTab(isDraft ? 'drafts' : 'published');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -358,7 +363,7 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
   const handleCancelEdit = () => {
     resetComposer();
     setError('');
-    setActiveTab('whispers');
+    setActiveTab('published');
   };
 
   useEffect(() => {
@@ -367,7 +372,7 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
       if (event.key === 'Escape') {
         resetComposer();
         setError('');
-        setActiveTab('whispers');
+        setActiveTab('published');
       }
     };
     document.addEventListener('keydown', handler);
@@ -492,6 +497,14 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
     return date.toLocaleDateString('en-US', options);
   };
 
+  if (initialLoading) {
+    return (
+      <div className="page-center" style={{ background: '#0a0e1a', minHeight: '100vh' }}>
+        <div className="loading-spinner"></div>
+      </div>
+    );
+  }
+
   return (
     <BackgroundProvider backgroundTheme={selectedTheme} backgroundTint={backgroundTint}>
       <div
@@ -518,19 +531,29 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
                   textDecoration: 'none',
                 }}
               >
-                {settings?.title || editTitle || 'My Whispers'}
+                {settings?.title || editTitle || ''}
               </Link>
             </h1>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <Link href="/" className="nav-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                <ExternalLink size={16} />
-                View Site
-              </Link>
-              <button onClick={handleLogout} className="btn btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                <LogOut size={16} />
-                Logout
-              </button>
-            </div>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-tertiary)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontSize: '0.85rem',
+                padding: '0.5rem',
+                transition: 'color 0.2s ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
+            >
+              <LogOut size={14} />
+              Logout
+            </button>
           </div>
         </div>
       </header>
@@ -566,27 +589,50 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setActiveTab('admin')}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '0.6rem 0',
-                marginBottom: '-1px',
-                borderBottom: activeTab === 'admin' ? '2px solid var(--text-primary)' : '2px solid transparent',
-                color: activeTab === 'admin' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                letterSpacing: '0.04em',
-                transition: 'color 0.2s ease, border-bottom 0.2s ease',
-              }}
-            >
-              <Shield size={16} />
-              Admin
-            </button>
+            <div style={{ display: 'flex', gap: '1.25rem' }}>
+              <button
+                onClick={() => setActiveTab('profile')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '0.6rem 0',
+                  marginBottom: '-1px',
+                  borderBottom: activeTab === 'profile' ? '2px solid var(--text-primary)' : '2px solid transparent',
+                  color: activeTab === 'profile' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  letterSpacing: '0.04em',
+                  transition: 'color 0.2s ease, border-bottom 0.2s ease',
+                }}
+              >
+                <Cog size={16} />
+                Profile
+              </button>
+              <button
+                onClick={() => setActiveTab('admin')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '0.6rem 0',
+                  marginBottom: '-1px',
+                  borderBottom: activeTab === 'admin' ? '2px solid var(--text-primary)' : '2px solid transparent',
+                  color: activeTab === 'admin' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  letterSpacing: '0.04em',
+                  transition: 'color 0.2s ease, border-bottom 0.2s ease',
+                }}
+              >
+                <Shield size={16} />
+                Admin
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -594,43 +640,37 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
 
           {activeTab === 'new' && (
             <div className="card mb-4 admin-tab-content">
-              <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>
+              <h3 className="settings-section">
                 {editingPost ? 'Edit Whisper' : 'New Whisper'}
-              </h2>
-              {editingPost && (
-                <div
-                  className="message"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    background: 'rgba(24, 27, 40, 0.65)',
-                    border: '1px solid rgba(158, 160, 255, 0.35)',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Editing whisper from {formatDate(editingPost.date)}
-                </div>
-              )}
-              <form onSubmit={handleSavePost} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              </h3>
+
+              {error && <div className="message message-error">{error}</div>}
+
+              <form onSubmit={(e) => handleSavePost(e, false)}>
                 <div className="form-field">
-                  <label htmlFor="content">Content</label>
+                  <label htmlFor="post-content">Your whisper</label>
                   <textarea
-                    id="content"
+                    id="post-content"
                     value={newPost}
                     onChange={(e) => setNewPost(e.target.value)}
-                    placeholder="Write your whisper..."
-                    maxLength={1000}
+                    placeholder="Share your thoughts in the quiet hours..."
                     disabled={loading}
+                    rows={6}
+                    style={{ resize: 'vertical', minHeight: '120px' }}
                   />
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
-                    {newPost.length}/1000 characters
-                  </p>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    marginTop: '0.5rem',
+                    color: newPost.length > 900 ? 'var(--error)' : 'var(--text-tertiary)'
+                  }}>
+                    {newPost.length} / 1000 characters
+                  </div>
                 </div>
 
                 <div className="form-field">
-                  <label htmlFor="date">Date</label>
+                  <label htmlFor="post-date">Date</label>
                   <input
-                    id="date"
+                    id="post-date"
                     type="date"
                     value={postDate}
                     onChange={(e) => setPostDate(e.target.value)}
@@ -639,108 +679,124 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
                 </div>
 
                 <div className="form-field">
-                  <label>Icon</label>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                      flexWrap: 'wrap',
-                    }}
-                  >
+                  <label>Icon & Color</label>
+
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <button
                       type="button"
-                      onClick={() => setShowIconPicker(true)}
+                      onClick={() => setShowIconPicker(!showIconPicker)}
+                      disabled={loading}
                       style={{
-                        width: '3.1rem',
-                        height: '3.1rem',
-                        borderRadius: '1rem',
+                        width: '3rem',
+                        height: '3rem',
+                        borderRadius: '0.75rem',
                         background: selectedPreset.iconBg,
-                        border: `1px solid ${selectedPreset.iconBorder}`,
+                        border: `2px solid ${selectedPreset.iconBorder}`,
+                        color: selectedPreset.iconColor,
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: selectedPreset.iconColor,
-                        boxShadow: `0 18px 42px ${selectedPreset.iconBorder}`,
-                        cursor: 'pointer',
-                        transition: 'transform 0.12s ease, box-shadow 0.12s ease',
+                        transition: 'all 0.2s ease',
                       }}
+                      aria-label="Select icon"
                     >
-                      {renderIcon(selectedIcon ?? 'MoonStar', { size: 22 })}
+                      {renderIcon(selectedIcon || 'MoonStar', { size: 20, strokeWidth: 2 })}
                     </button>
 
-                    <div style={{ display: 'inline-flex', gap: '0.45rem', flexWrap: 'wrap' }}>
-                      {ICON_COLORS.map(({ name, label, iconBg, iconBorder }) => (
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      {ICON_COLORS.map(({ name, iconBg, iconBorder }) => (
                         <button
                           key={name}
                           type="button"
                           onClick={() => setSelectedColor(name)}
+                          disabled={loading}
                           style={{
-                            width: '1.8rem',
-                            height: '1.8rem',
-                            borderRadius: '0.65rem',
+                            width: '2rem',
+                            height: '2rem',
+                            borderRadius: '0.5rem',
                             background: iconBg,
-                            border: selectedColor === name
-                              ? `2px solid ${iconBorder}`
-                              : '1px solid rgba(158, 160, 255, 0.2)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                            border: `2px solid ${iconBorder}`,
                             cursor: 'pointer',
-                            transition: 'transform 0.12s ease, border 0.12s ease',
-                            transform: selectedColor === name ? 'scale(1.05)' : 'none',
+                            opacity: selectedColor === name ? 1 : 0.5,
+                            transform: selectedColor === name ? 'scale(1.15)' : 'scale(1)',
+                            transition: 'all 0.2s ease',
                           }}
-                          aria-label={`Select ${label}`}
-                          title={label}
-                        >
-                          {renderIcon(selectedIcon ?? 'MoonStar', { size: 12 })}
-                        </button>
+                          aria-label={`Select ${name} color`}
+                        />
                       ))}
                     </div>
-                    {selectedIcon && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedIcon(null)}
-                        className="btn-outline"
-                      >
-                        <X size={14} />
-                        Clear
-                      </button>
-                    )}
+
                   </div>
-                  {!selectedIcon && (
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.35rem' }}>
-                      No icon selected – the MoonStar icon will be used.
-                    </p>
-                  )}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: editingPost ? 'space-between' : 'flex-end', gap: '0.75rem' }}>
-                  {editingPost && (
-                    <button
-                      type="button"
-                      className="btn-outline"
-                      onClick={handleCancelEdit}
-                      disabled={loading}
-                    >
-                      Cancel
-                    </button>
+                <div style={{ display: 'flex', gap: '1rem', flexDirection: 'row' }}>
+                  {editingPost ? (
+                    <>
+                      {editingPost.isDraft ? (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-outline"
+                            onClick={(e) => handleSavePost(e, true)}
+                            disabled={loading || !newPost.trim()}
+                            style={{ flex: 1, opacity: !newPost.trim() ? 0.5 : 1 }}
+                          >
+                            {loading ? 'Saving…' : 'Save as Draft'}
+                          </button>
+                          <button
+                            type="submit"
+                            className="btn-soft"
+                            style={{ flex: 1, opacity: !newPost.trim() ? 0.5 : 1 }}
+                            disabled={loading || !newPost.trim()}
+                          >
+                            {loading ? 'Publishing…' : 'Publish'}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="submit"
+                          className="btn-soft"
+                          style={{ width: '100%', opacity: !newPost.trim() ? 0.5 : 1 }}
+                          disabled={loading || !newPost.trim()}
+                        >
+                          {loading ? 'Updating…' : 'Update'}
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-outline"
+                        onClick={(e) => handleSavePost(e, true)}
+                        disabled={loading || !newPost.trim()}
+                        style={{ flex: 1, opacity: !newPost.trim() ? 0.5 : 1 }}
+                      >
+                        {loading ? 'Saving…' : 'Save as Draft'}
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn-soft"
+                        style={{ flex: 1, opacity: !newPost.trim() ? 0.5 : 1 }}
+                        disabled={loading || !newPost.trim()}
+                      >
+                        {loading ? 'Publishing…' : 'Publish'}
+                      </button>
+                    </>
                   )}
-                  <button type="submit" className="btn-soft" disabled={loading || !newPost.trim()}>
-                    {loading ? (editingPost ? 'Updating…' : 'Whispering…') : editingPost ? 'Update Whisper' : 'Whisper'}
-                  </button>
                 </div>
               </form>
             </div>
           )}
 
-          {activeTab === 'whispers' && (
+          {activeTab === 'drafts' && (
             <div className="admin-tab-content">
-              {posts.length === 0 ? (
-                <p style={{ color: 'var(--text-secondary)' }}>No whispers yet...</p>
+              {posts.filter(p => p.isDraft).length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)' }}>No drafts yet...</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {posts.map((post) => (
+                  {posts.filter(p => p.isDraft).map((post) => (
                     <WhisperCard
                       key={post._id}
                       whisper={{
@@ -763,6 +819,50 @@ const navigationTabs: Array<{ id: 'whispers' | 'new' | 'profile' | 'admin'; labe
                           <button
                             onClick={() => handleDeletePost(post._id)}
                             className="btn-outline"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'published' && (
+            <div className="admin-tab-content">
+              {posts.filter(p => !p.isDraft).length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)' }}>No published whispers yet...</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {posts.filter(p => !p.isDraft).map((post) => (
+                    <WhisperCard
+                      key={post._id}
+                      whisper={{
+                        id: post._id,
+                        content: post.content,
+                        date: post.date,
+                        icon: post.icon,
+                        color: post.color,
+                        formattedDate: formatDate(post.date),
+                      }}
+                      highlight={editingPost?._id === post._id}
+                      actions={(
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                          <button
+                            onClick={() => handleStartEdit(post)}
+                            className="btn-outline"
+                            disabled={loading}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeletePost(post._id)}
+                            className="btn-outline"
+                            style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: 'rgba(239, 68, 68, 0.9)' }}
+                            disabled={loading}
                           >
                             Delete
                           </button>

@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Plus } from 'lucide-react';
 import WhisperCard from '@/components/whispers/WhisperCard';
+import { ComposeModal } from '@/components/ComposeModal';
 import { DEFAULT_ICON_COLOR, isValidIconColor, type IconColorName } from '@/lib/whispers';
 import { BackgroundProvider } from '@/components/BackgroundProvider';
 
@@ -28,6 +30,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showComposeModal, setShowComposeModal] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   const [timerProgress, setTimerProgress] = useState(0);
@@ -246,6 +249,31 @@ export default function Home() {
   return (
     <BackgroundProvider backgroundTheme={settings?.backgroundTheme} backgroundTint={settings?.backgroundTint || 'none'}>
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Compose Button */}
+      {isAuthenticated && !expandedId && (
+        <button
+          onClick={() => setShowComposeModal(true)}
+          className="btn-soft"
+          style={{
+            position: 'fixed',
+            top: '2rem',
+            right: '2rem',
+            width: '3rem',
+            height: '3rem',
+            borderRadius: '50%',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+          }}
+          aria-label="Compose new whisper"
+        >
+          <Plus size={24} />
+        </button>
+      )}
+
       {/* Header */}
       <header style={{ paddingTop: '4rem', paddingBottom: '4rem' }} className="animate-fade-up">
         <div className="container">
@@ -278,8 +306,8 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main style={{ flex: 1, paddingBottom: '4rem' }}>
-        <div className="container animate-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <main style={{ flex: 1, paddingBottom: '4rem', display: 'flex', alignItems: hasNoPosts ? 'center' : 'flex-start' }}>
+        <div className="container animate-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
           {hasNoPosts ? (
             <div className="text-center">
               <p style={{ fontSize: '1.125rem', marginBottom: '2rem' }}>
@@ -292,7 +320,7 @@ export default function Home() {
               )}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ display: expandedId ? 'none' : 'flex', flexDirection: 'column', gap: '2rem' }}>
               {posts.map((post) => (
                 <WhisperCard
                   key={post._id}
@@ -445,6 +473,15 @@ export default function Home() {
           </button>
         </>
       )}
+
+      {/* Compose Modal */}
+      <ComposeModal
+        isOpen={showComposeModal}
+        onClose={() => setShowComposeModal(false)}
+        onSuccess={() => {
+          fetchPosts();
+        }}
+      />
       </div>
     </BackgroundProvider>
   );

@@ -8,7 +8,25 @@ export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const posts = await Post.find({})
+    // Check if requesting drafts (admin only)
+    const url = new URL(request.url);
+    const includeDrafts = url.searchParams.get('includeDrafts') === 'true';
+
+    // If requesting drafts, verify authentication
+    if (includeDrafts) {
+      const token = request.cookies.get('midnight-auth')?.value;
+      if (!token || !verifyToken(token)) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+    }
+
+    // Fetch posts based on draft status
+    // For public view, exclude drafts (isDraft: true). Include posts where isDraft is false or undefined (legacy posts)
+    const query = includeDrafts ? {} : { $or: [{ isDraft: false }, { isDraft: { $exists: false } }] };
+    const posts = await Post.find(query)
       .sort({ date: -1 })
       .lean();
 
@@ -19,6 +37,7 @@ export async function GET(request: NextRequest) {
           ? post.icon.trim()
           : null,
       color: isValidIconColor(post.color) ? post.color : DEFAULT_ICON_COLOR,
+      isDraft: post.isDraft || false, // Default to false for legacy posts
     }));
 
     return NextResponse.json(normalized);
@@ -54,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     await connectToDatabase();
 
-    const { content, date, icon, color } = await request.json();
+    const { content, date, icon, color, isDraft } = await request.json();
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -75,6 +94,7 @@ export async function POST(request: NextRequest) {
       date: date ? new Date(date) : new Date(),
       icon: typeof icon === 'string' && icon.trim().length > 0 ? icon.trim() : null,
       color: isValidIconColor(color) ? color : DEFAULT_ICON_COLOR,
+      isDraft: isDraft === true,
     });
 
     await post.save();

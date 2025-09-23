@@ -1,19 +1,19 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Midnight Whisper is a Next.js App Router project. UI screens live in `app/` with route groups: `app/midnight-whisper` (reader), `app/admin` (dashboard), `app/login` (auth) and `app/setup` (onboarding). API handlers reside in `app/api/...`, sharing the Mongoose models from `models/`. Shared server/client utilities live in `lib/` (authentication, MongoDB connection, whisper presets). Reusable UI components belong in `components/`, currently `components/whispers/WhisperCard.tsx`. Static assets and fonts stay in `public/`, and cross-route guards are defined in `middleware.ts`.
+Midnight Whisper is a Next.js App Router project. Page code lives in `app/` with route groups `app/midnight-whisper`, `app/admin`, `app/login`, and `app/setup`. API handlers stay under `app/api/...` and share Mongoose models from `models/`. Reusable utilities belong in `lib/`, and UI pieces go in `components/` (e.g. `components/whispers/WhisperCard.tsx`). Static assets and fonts live in `public/`, while cross-route guards sit in `middleware.ts`.
 
 ## Build, Test, and Development Commands
-Prefer pnpm for dependency management. Run `pnpm install` after pulling new changes. Use `pnpm dev` to start the Turbopack development server on http://localhost:3000, and make sure required env vars are present before launching. `pnpm build` produces an optimized bundle, while `pnpm start` serves that bundle in production mode. When debugging database issues, stop the server, update `.env.local`, then relaunch with `pnpm dev` to reload connections.
+Run `pnpm install` after pulling to sync dependencies. Use `pnpm dev` to launch Turbopack on http://localhost:3000; ensure `.env.local` provides `MONGODB_URI` and `NEXTAUTH_SECRET`. Build production bundles with `pnpm build` and serve them via `pnpm start`. When debugging database issues, restart `pnpm dev` after editing environment variables.
 
 ## Coding Style & Naming Conventions
-TypeScript is the default; keep files as `.tsx` for React screens and `.ts` for utilities and models. Follow the existing two-space indentation, single quotes, and explicit semicolons. Components should be PascalCase (`WhisperCard`), hooks and helpers camelCase, and constants SCREAMING_CASE. Keep React components functional, colocate feature styling by extending Tailwind utility classes in `app/globals.css`, and reuse helpers from `lib/whispers.ts` instead of duplicating icon logic.
+Write TypeScript or TSX with two-space indentation, single quotes, and explicit semicolons. Keep React components functional and use PascalCase (`WhisperCard`) for components, camelCase for helpers, and SCREAMING_CASE for constants. Extend styles with Tailwind classes in `app/globals.css`. Reuse helper logic from `lib/whispers.ts` instead of reimplementing icons or presets.
 
 ## Testing Guidelines
-Automated tests are not wired up yet, so validate flows manually in `pnpm dev`, focusing on login, admin CRUD, and public feed rendering. When you introduce automated coverage, prefer Vitest or Playwright and store specs alongside features as `__tests__/*.test.ts`. Exercise new API routes with both success and failure cases, seed Mongo fixtures via temporary helpers, and document any required test data in the pull request.
+Automated tests are not yet wired up; validate flows manually in `pnpm dev`, focusing on login, admin CRUD, and the public feed. If you add automated coverage, prefer Vitest or Playwright, name files `__tests__/feature.test.ts`, and document required fixtures.
 
 ## Commit & Pull Request Guidelines
-History currently contains only the scaffold commit; adopt Conventional Commit prefixes (`feat:`, `fix:`, `chore:`) to describe intent in 72 characters or fewer. Each PR should group related changes, include a summary of risk areas, list manual or automated test results, and link tracking issues when available. Screenshots or clips are expected when altering UI states (home feed, admin dashboard). Request review before merging and wait for green builds once a CI pipeline is added.
+Follow Conventional Commits such as `feat: add admin filters`, keeping subjects under 72 characters. PRs should group related changes, describe risk areas, list manual or automated test results, and attach screenshots or clips for UI updates. Request review before merging and wait for green CI once available.
 
 ## Security & Configuration Tips
-Secrets belong in `.env.local`; at minimum set `MONGODB_URI` and `NEXTAUTH_SECRET` with unique values. Never commit the file. Rotate credentials whenever sharing access, and confirm the JWT secret matches the environment where tokens originate. For local runs, use throwaway Mongo databases and clean them after testing sensitive content.
+Never commit `.env.local`; store secrets like `MONGODB_URI` and `NEXTAUTH_SECRET` there and rotate them when sharing access. Use disposable Mongo databases for local runs and clean sensitive data after testing. Keep JWT secrets aligned across environments to avoid auth issues.

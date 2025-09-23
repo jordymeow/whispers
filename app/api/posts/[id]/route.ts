@@ -21,7 +21,7 @@ export async function PUT(
 
     await connectToDatabase();
 
-    const { content, date, icon, color } = await request.json();
+    const { content, date, icon, color, isDraft } = await request.json();
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json(
@@ -37,14 +37,18 @@ export async function PUT(
       );
     }
 
+    const updateData: any = {
+      content: content.trim(),
+      icon: typeof icon === 'string' && icon.trim().length > 0 ? icon.trim() : null,
+      color: isValidIconColor(color) ? color : DEFAULT_ICON_COLOR,
+    };
+
+    if (date) updateData.date = new Date(date);
+    if (isDraft !== undefined) updateData.isDraft = isDraft;
+
     const post = await Post.findByIdAndUpdate(
       id,
-      {
-        content: content.trim(),
-        date: date ? new Date(date) : undefined,
-        icon: typeof icon === 'string' && icon.trim().length > 0 ? icon.trim() : null,
-        color: isValidIconColor(color) ? color : DEFAULT_ICON_COLOR,
-      },
+      updateData,
       { new: true }
     );
 

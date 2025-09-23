@@ -6,6 +6,7 @@ export interface IPost extends Document {
   date: Date;
   icon?: string | null;
   color: string;
+  isDraft: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +32,10 @@ const PostSchema = new Schema<IPost>(
       type: String,
       enum: ICON_COLORS.map(({ name }) => name),
       default: DEFAULT_ICON_COLOR,
+    },
+    isDraft: {
+      type: Boolean,
+      default: false,
     },
   },
   {
