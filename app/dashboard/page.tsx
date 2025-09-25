@@ -57,7 +57,6 @@ interface CurrentUser {
   username: string;
   email: string;
   displayName: string;
-  username: string;
   bio: string;
   role: 'admin' | 'user';
   backgroundTheme: BackgroundThemeKey;
