@@ -75,6 +75,10 @@ export async function POST(request: NextRequest) {
     const mongoose = await import('mongoose');
     const ObjectId = mongoose.Types.ObjectId;
 
+    if (!mongoose.connection.db) {
+      throw new Error('Database connection not established');
+    }
+
     await mongoose.connection.db
       .collection('users')
       .updateOne(
