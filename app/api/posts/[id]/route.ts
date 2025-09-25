@@ -21,6 +21,19 @@ export async function PUT(
 
     await connectToDatabase();
 
+    const existingPost = await Post.findById(id);
+
+    if (!existingPost) {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      );
+    }
+
+    if (existingPost.userId && existingPost.userId.toString() !== user.userId && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { content, date, icon, color, isDraft } = await request.json();
 
     if (!content || content.trim().length === 0) {
@@ -37,35 +50,17 @@ export async function PUT(
       );
     }
 
-    const updateData: any = {
-      content: content.trim(),
-      icon: typeof icon === 'string' && icon.trim().length > 0 ? icon.trim() : null,
-      color: isValidIconColor(color) ? color : DEFAULT_ICON_COLOR,
-    };
+    existingPost.content = content.trim();
+    existingPost.icon = typeof icon === 'string' && icon.trim().length > 0 ? icon.trim() : null;
+    existingPost.color = isValidIconColor(color) ? color : DEFAULT_ICON_COLOR;
 
-    if (date) updateData.date = new Date(date);
-    if (isDraft !== undefined) updateData.isDraft = isDraft;
+    if (date) existingPost.date = new Date(date);
+    if (isDraft !== undefined) existingPost.isDraft = isDraft;
 
-    const post = await Post.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    );
+    await existingPost.save();
+    const populated = await existingPost.populate('userId', 'displayName nickname');
 
-    if (!post) {
-      return NextResponse.json(
-        { error: 'Post not found' },
-        { status: 404 }
-      );
-    }
-
-    const sanitized = {
-      ...post.toObject(),
-      icon: post.icon && post.icon.length ? post.icon : null,
-      color: isValidIconColor(post.color) ? post.color : DEFAULT_ICON_COLOR,
-    };
-
-    return NextResponse.json(sanitized);
+    return NextResponse.json(normalizePost(populated.toObject()));
   } catch (error) {
     console.error('Update post error:', error);
     return NextResponse.json(
@@ -73,6 +68,34 @@ export async function PUT(
       { status: 500 }
     );
   }
+}
+
+function normalizePost(post: any) {
+  const icon =
+    typeof post.icon === 'string' && post.icon.trim().length > 0
+      ? post.icon.trim()
+      : null;
+
+  const color = isValidIconColor(post.color) ? post.color : DEFAULT_ICON_COLOR;
+
+  const authorDoc: any = post.userId && typeof post.userId === 'object' ? post.userId : null;
+
+  const author = authorDoc
+    ? {
+        displayName: authorDoc.displayName,
+        nickname: authorDoc.nickname,
+      }
+    : null;
+
+  return {
+    _id: post._id?.toString?.() ?? post._id,
+    content: post.content,
+    date: post.date,
+    icon,
+    color,
+    isDraft: Boolean(post.isDraft),
+    author,
+  };
 }
 
 export async function DELETE(
@@ -92,7 +115,7 @@ export async function DELETE(
 
     await connectToDatabase();
 
-    const post = await Post.findByIdAndDelete(id);
+    const post = await Post.findById(id);
 
     if (!post) {
       return NextResponse.json(
@@ -100,6 +123,12 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    if (post.userId && post.userId.toString() !== user.userId && user.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    await post.deleteOne();
 
     return NextResponse.json({ success: true });
   } catch (error) {

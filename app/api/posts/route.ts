@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/mongodb';
 import Post from '@/models/Post';
+import User from '@/models/User';
 import { verifyToken } from '@/lib/auth';
 import { DEFAULT_ICON_COLOR, isValidIconColor } from '@/lib/whispers';
 
@@ -8,37 +10,39 @@ export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    // Check if requesting drafts (admin only)
     const url = new URL(request.url);
     const includeDrafts = url.searchParams.get('includeDrafts') === 'true';
+    const authorNickname = url.searchParams.get('author')?.toLowerCase() ?? null;
 
-    // If requesting drafts, verify authentication
-    if (includeDrafts) {
-      const token = request.cookies.get('midnight-auth')?.value;
-      if (!token || !verifyToken(token)) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
+    const token = request.cookies.get('midnight-auth')?.value ?? '';
+    const viewer = token ? verifyToken(token) : null;
+
+    if (includeDrafts && !viewer) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch posts based on draft status
-    // For public view, exclude drafts (isDraft: true). Include posts where isDraft is false or undefined (legacy posts)
-    const query = includeDrafts ? {} : { $or: [{ isDraft: false }, { isDraft: { $exists: false } }] };
-    const posts = await Post.find(query)
+    const baseQuery: Record<string, any> = includeDrafts
+      ? {}
+      : { $or: [{ isDraft: false }, { isDraft: { $exists: false } }] };
+
+    if (authorNickname) {
+      const authorUser = await User.findOne({ nickname: authorNickname }).select('_id').lean();
+      if (!authorUser) {
+        return NextResponse.json([]);
+      }
+      baseQuery.userId = authorUser._id;
+    }
+
+    if (includeDrafts && viewer?.role !== 'admin') {
+      baseQuery.userId = new mongoose.Types.ObjectId(viewer.userId);
+    }
+
+    const posts = await Post.find(baseQuery)
       .sort({ date: -1 })
+      .populate('userId', 'displayName nickname')
       .lean();
 
-    const normalized = posts.map((post) => ({
-      ...post,
-      icon:
-        typeof post.icon === 'string' && post.icon.trim().length > 0
-          ? post.icon.trim()
-          : null,
-      color: isValidIconColor(post.color) ? post.color : DEFAULT_ICON_COLOR,
-      isDraft: post.isDraft || false, // Default to false for legacy posts
-    }));
+    const normalized = posts.map(normalizePost);
 
     return NextResponse.json(normalized);
   } catch (error) {
@@ -95,11 +99,13 @@ export async function POST(request: NextRequest) {
       icon: typeof icon === 'string' && icon.trim().length > 0 ? icon.trim() : null,
       color: isValidIconColor(color) ? color : DEFAULT_ICON_COLOR,
       isDraft: isDraft === true,
+      userId: user.userId,
     });
 
     await post.save();
 
-    return NextResponse.json(post);
+    const populated = await post.populate('userId', 'displayName nickname');
+    return NextResponse.json(normalizePost(populated.toObject()));
   } catch (error) {
     console.error('Create post error:', error);
     return NextResponse.json(
@@ -107,4 +113,32 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function normalizePost(post: any) {
+  const icon =
+    typeof post.icon === 'string' && post.icon.trim().length > 0
+      ? post.icon.trim()
+      : null;
+
+  const color = isValidIconColor(post.color) ? post.color : DEFAULT_ICON_COLOR;
+
+  const authorDoc: any = post.userId && typeof post.userId === 'object' ? post.userId : null;
+
+  const author = authorDoc
+    ? {
+        displayName: authorDoc.displayName,
+        nickname: authorDoc.nickname,
+      }
+    : null;
+
+  return {
+    _id: post._id?.toString?.() ?? post._id,
+    content: post.content,
+    date: post.date,
+    icon,
+    color,
+    isDraft: Boolean(post.isDraft),
+    author,
+  };
 }

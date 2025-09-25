@@ -6,25 +6,25 @@ export const BACKGROUND_THEMES = {
   },
   northern_lights: {
     name: 'Northern Lights',
-    style: '#0a0e1a', // Simple dark background, effects handled by JS
+    style: '#121a30', // Simple dark background, effects handled by JS
   },
   deep_ocean: {
     name: 'Deep Ocean',
-    style: '#0a0e1a', // Simple dark background, effects handled by JS
+    style: '#121a30', // Simple dark background, effects handled by JS
   },
 
   // Animated Patterns
   starfield: {
     name: 'Starfield',
-    style: '#0a0e1a', // Simple dark background, effects handled by JS
+    style: '#121a30', // Simple dark background, effects handled by JS
   },
   fireflies: {
     name: 'Fireflies',
-    style: '#0a0e1a', // Simple dark background, effects handled by JS
+    style: '#121a30', // Simple dark background, effects handled by JS
   },
   constellation: {
     name: 'Constellation',
-    style: '#0a0e1a', // Simple dark background, effects handled by JS
+    style: '#121a30', // Simple dark background, effects handled by JS
   },
 
   // Static Patterns
@@ -35,16 +35,16 @@ export const BACKGROUND_THEMES = {
   },
   hexagon: {
     name: 'Hexagon',
-    style: 'linear-gradient(30deg, #0a0e1a 12%, transparent 12.5%, transparent 87%, #0a0e1a 87.5%, #0a0e1a), linear-gradient(150deg, #0a0e1a 12%, transparent 12.5%, transparent 87%, #0a0e1a 87.5%, #0a0e1a), linear-gradient(30deg, #0a0e1a 12%, transparent 12.5%, transparent 87%, #0a0e1a 87.5%, #0a0e1a), linear-gradient(150deg, #0a0e1a 12%, transparent 12.5%, transparent 87%, #0a0e1a 87.5%, #0a0e1a), linear-gradient(60deg, #0f1420 25%, transparent 25.5%, transparent 75%, #0f1420 75%, #0f1420), linear-gradient(60deg, #0f1420 25%, transparent 25.5%, transparent 75%, #0f1420 75%, #0f1420)',
+    style: 'linear-gradient(30deg, #121a30 12%, transparent 12.5%, transparent 87%, #121a30 87.5%, #121a30), linear-gradient(150deg, #121a30 12%, transparent 12.5%, transparent 87%, #121a30 87.5%, #121a30), linear-gradient(30deg, #121a30 12%, transparent 12.5%, transparent 87%, #121a30 87.5%, #121a30), linear-gradient(150deg, #121a30 12%, transparent 12.5%, transparent 87%, #121a30 87.5%, #121a30), linear-gradient(60deg, #0f1420 25%, transparent 25.5%, transparent 75%, #0f1420 75%, #0f1420), linear-gradient(60deg, #0f1420 25%, transparent 25.5%, transparent 75%, #0f1420 75%, #0f1420)',
     size: '80px 140px',
   },
   ocean_waves: {
     name: 'Ocean Waves',
-    style: '#0a0e1a', // Simple dark background, effects handled by JS
+    style: '#121a30', // Simple dark background, effects handled by JS
   },
   vertical_lines: {
     name: 'Vertical Lines',
-    style: 'repeating-linear-gradient(90deg, #0a0e1a, #0a0e1a 30px, rgba(255,255,255,0.02) 30px, rgba(255,255,255,0.02) 31px)',
+    style: 'repeating-linear-gradient(90deg, #121a30, #121a30 30px, rgba(255,255,255,0.02) 30px, rgba(255,255,255,0.02) 31px)',
   },
   diamond: {
     name: 'Diamond',
@@ -60,7 +60,7 @@ export const BACKGROUND_THEMES = {
   // Textured & Organic
   static_noise: {
     name: 'Static Noise',
-    style: '#0a0e1a', // Simple dark background, effects handled by JS
+    style: '#121a30', // Simple dark background, effects handled by JS
   },
   woven: {
     name: 'Woven',
@@ -74,12 +74,28 @@ export const BACKGROUND_THEMES = {
   },
   midnight_rain: {
     name: 'Midnight Rain',
-    style: '#0a0e1a', // Simple dark background, rain is handled by JS
+    style: '#121a30', // Simple dark background, rain is handled by JS
   },
 } as const;
 
 export type BackgroundThemeKey = keyof typeof BACKGROUND_THEMES;
 export const DEFAULT_BACKGROUND_THEME: BackgroundThemeKey = 'cosmic_dust';
+
+export const BACKGROUND_TINTS = [
+  'none',
+  'purple',
+  'blue',
+  'cyan',
+  'green',
+  'amber',
+  'yellow',
+  'red',
+  'pink',
+  'indigo',
+] as const;
+
+export type BackgroundTint = (typeof BACKGROUND_TINTS)[number];
+export const DEFAULT_BACKGROUND_TINT: BackgroundTint = 'none';
 
 // CSS animations that need to be added to global styles
 export const BACKGROUND_ANIMATIONS = `

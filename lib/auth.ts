@@ -7,6 +7,10 @@ const COOKIE_NAME = 'midnight-auth';
 export interface TokenPayload {
   userId: string;
   username: string;
+  email: string;
+  displayName: string;
+  nickname: string;
+  role: 'admin' | 'user';
 }
 
 export function generateToken(payload: TokenPayload): string {

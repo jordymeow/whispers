@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Footer } from '@/components/Footer';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: "Midnight Whispers",
@@ -12,9 +13,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
-        {children}
+    <html lang='en'>
+      <body style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {children}
+        </div>
+        <Footer />
       </body>
     </html>
   );

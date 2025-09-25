@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function SetupPage() {
+export default function RegisterPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,27 +16,30 @@ export default function SetupPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    checkExistingSetup();
-  }, []);
-
-  const checkExistingSetup = async () => {
-    try {
-      const res = await fetch('/api/auth/check');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.hasUsers) {
-          router.push('/login');
-          return;
+    const verifySetup = async () => {
+      try {
+        const res = await fetch('/api/auth/check');
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.hasUsers) {
+            router.replace('/setup');
+            return;
+          }
         }
+      } catch (err) {
+        console.error('Register check failed:', err);
+      } finally {
+        setChecking(false);
       }
-    } catch (error) {
-      console.error('Setup check failed:', error);
-    } finally {
-      setChecking(false);
-    }
-  };
+    };
+    verifySetup();
+  }, [router]);
 
   const validateForm = () => {
+    if (!name.trim()) {
+      setError('Name is required');
+      return false;
+    }
     if (!username.trim()) {
       setError('Username is required');
       return false;
@@ -51,10 +54,6 @@ export default function SetupPage() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError('Enter a valid email');
-      return false;
-    }
-    if (!name.trim()) {
-      setError('Name is required');
       return false;
     }
     if (!password) {
@@ -72,8 +71,8 @@ export default function SetupPage() {
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError('');
 
     if (!validateForm()) return;
@@ -81,34 +80,31 @@ export default function SetupPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/setup', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: username.trim(),
-          email: email.trim(),
-          password,
           name: name.trim(),
+          email: email.trim(),
+          username: username.trim(),
+          password,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Setup failed. Please try again.');
+        setError(data.error || 'Registration failed. Please try again.');
         setLoading(false);
         return;
       }
 
-      if (data.success) {
-        // Force a hard redirect to ensure cookies are read
-        window.location.href = '/admin';
-      } else {
-        setError('Setup failed. Please try again.');
-        setLoading(false);
+      if (data.redirectTo) {
+        router.replace(data.redirectTo);
+        router.refresh();
       }
     } catch (err) {
-      console.error('Setup error:', err);
+      console.error('Registration error:', err);
       setError('Connection error. Please try again.');
       setLoading(false);
     }
@@ -126,8 +122,8 @@ export default function SetupPage() {
     <div className="page-center">
       <div style={{ width: '100%', maxWidth: '24rem' }}>
         <div className="page-header">
-          <h1>Welcome</h1>
-          <p>Create your space for quiet thoughts</p>
+          <h1>Join the Whispers</h1>
+          <p>Create your account to share quietly</p>
         </div>
 
         <div className="card">
@@ -139,8 +135,9 @@ export default function SetupPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="How should we call you?"
+                placeholder="What should we call you?"
                 autoComplete="name"
+                autoFocus
                 disabled={loading}
               />
             </div>
@@ -165,9 +162,8 @@ export default function SetupPage() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Choose your username"
+                placeholder="Choose a unique username"
                 autoComplete="username"
-                autoFocus
                 disabled={loading}
               />
             </div>
@@ -192,7 +188,7 @@ export default function SetupPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
+                placeholder="Repeat your password"
                 autoComplete="new-password"
                 disabled={loading}
               />
@@ -208,7 +204,7 @@ export default function SetupPage() {
               type="submit"
               className="btn btn-primary"
               style={{ width: '100%', marginTop: '1rem' }}
-              disabled={loading || !name || !username || !email || !password || !confirmPassword}
+              disabled={loading || !username || !password || !confirmPassword || !name || !email}
             >
               {loading ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
@@ -223,8 +219,11 @@ export default function SetupPage() {
         </div>
 
         <div className="text-center mt-4">
+          <Link href="/login" className="nav-link" style={{ marginRight: '1rem' }}>
+            Already have an account?
+          </Link>
           <Link href="/" className="nav-link">
-            ← Back to home
+            ← Back to whispers
           </Link>
         </div>
       </div>

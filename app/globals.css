@@ -2,19 +2,19 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #08090d;
-  --bg-secondary: rgba(0, 0, 0, 0.4);
-  --bg-tertiary: rgba(26, 29, 39, 0.85);
-  --bg-gradient-start: #050608;
-  --bg-gradient-end: #11151c;
-  --text-primary: #f3f4f6;
-  --text-secondary: #b4b8c4;
-  --text-tertiary: #6d7380;
-  --border-color: rgba(124, 132, 164, 0.25);
-  --accent: rgba(124, 124, 240, 0.35);
-  --accent-bright: #9a9aff;
-  --error: #ef4444;
-  --success: #10b981;
+  --bg-primary: #11172b;
+  --bg-secondary: rgba(20, 28, 46, 0.55);
+  --bg-tertiary: rgba(32, 42, 64, 0.72);
+  --bg-gradient-start: #101524;
+  --bg-gradient-end: #1c243a;
+  --text-primary: #f6f7fb;
+  --text-secondary: #c7ccda;
+  --text-tertiary: #8c93a8;
+  --border-color: rgba(142, 150, 188, 0.35);
+  --accent: rgba(142, 142, 255, 0.45);
+  --accent-bright: #a8a8ff;
+  --error: #ef5a5a;
+  --success: #19c290;
   --font-title: Georgia, serif;
   --font-body: "IBM Plex Mono", "SFMono-Regular", monospace;
   --font-body-size: 15px;
@@ -41,7 +41,7 @@ html {
 
 body {
   position: relative;
-  background: #0a0e1a; /* Default solid background - will be overridden by theme */
+  background: #121a30; /* Default solid background - will be overridden by theme */
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: var(--font-body-size);
@@ -58,7 +58,7 @@ body::after {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at center, rgba(10, 10, 12, 0), rgba(5, 5, 6, 0.65));
+  background: radial-gradient(circle at center, rgba(16, 18, 28, 0), rgba(12, 14, 22, 0.4));
   z-index: -2;
 }
 
@@ -147,12 +147,12 @@ a:hover {
 
 /* Cards */
 .card {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(16, 22, 36, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 1rem;
   padding: 2rem;
   backdrop-filter: blur(16px);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 18px 48px rgba(8, 12, 24, 0.35);
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
@@ -372,6 +372,17 @@ textarea {
   color: var(--success);
 }
 
+.admin-button-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-button-row > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* Loading */
 .loading-spinner {
   display: inline-block;
@@ -417,10 +428,10 @@ textarea {
 /* Whisper styles */
 .whisper-post {
   padding: 2.25rem;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 28, 46, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 1.5rem;
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 18px 42px rgba(10, 14, 30, 0.35);
   backdrop-filter: blur(20px);
   transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
@@ -488,9 +499,9 @@ div[role="button"] .whisper-post {
 }
 
 .whisper-modal-container .whisper-post {
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(24, 30, 48, 0.75);
   backdrop-filter: blur(20px);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 24px 56px rgba(12, 16, 32, 0.55);
 }
 
 .whisper-modal-container .whisper-card-complete {

@@ -26,16 +26,16 @@ interface BackgroundProviderProps {
 export function BackgroundProvider({ backgroundTheme, backgroundTint = 'none', children }: BackgroundProviderProps) {
   // Color tint definitions - RGB values to blend with background
   const TINT_COLORS: Record<string, { r: number; g: number; b: number }> = {
-    none: { r: 10, g: 14, b: 26 }, // Default dark blue
-    purple: { r: 25, g: 10, b: 35 },
-    blue: { r: 10, g: 20, b: 40 },
-    cyan: { r: 10, g: 30, b: 35 },
-    green: { r: 10, g: 25, b: 15 },
-    amber: { r: 35, g: 25, b: 10 }, // More orange
-    yellow: { r: 40, g: 35, b: 10 }, // Bright yellow
-    red: { r: 30, g: 10, b: 10 },
-    pink: { r: 30, g: 10, b: 25 },
-    indigo: { r: 15, g: 10, b: 35 },
+    none: { r: 24, g: 30, b: 48 },
+    purple: { r: 44, g: 30, b: 64 },
+    blue: { r: 28, g: 44, b: 74 },
+    cyan: { r: 28, g: 60, b: 70 },
+    green: { r: 26, g: 50, b: 32 },
+    amber: { r: 62, g: 46, b: 18 },
+    yellow: { r: 70, g: 60, b: 18 },
+    red: { r: 58, g: 26, b: 26 },
+    pink: { r: 60, g: 28, b: 48 },
+    indigo: { r: 36, g: 28, b: 72 },
   };
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export function BackgroundProvider({ backgroundTheme, backgroundTint = 'none', c
 
     if (!theme) {
       // Set a default dark background if theme not found
-      document.body.style.background = 'hsl(220, 40%, 8%)';
+      document.body.style.background = 'hsl(220, 36%, 20%)';
       return;
     }
 
@@ -91,7 +91,7 @@ export function BackgroundProvider({ backgroundTheme, backgroundTint = 'none', c
 
     // Cleanup - restore dark background
     return () => {
-      document.body.style.background = '#0a0e1a'; // Default dark background from globals.css
+      document.body.style.background = '#121a30'; // Default background from globals.css
       document.body.style.backgroundColor = '';
       document.body.style.backgroundImage = '';
       document.body.style.backgroundSize = '';

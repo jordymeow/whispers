@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import Settings from '@/models/Settings';
 import { checkAuth } from '@/lib/auth';
+import { DEFAULT_ASCII_ART_BANNER } from '@/lib/siteDefaults';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,26 +16,25 @@ export async function GET(request: NextRequest) {
         backgroundTheme: 'cosmic_dust',
         backgroundHue: 0,
         trackingSnippet: '',
+        asciiArt: DEFAULT_ASCII_ART_BANNER,
       });
       await settings.save();
     }
 
-    console.log('GET settings - backgroundTheme from DB:', settings.backgroundTheme);
+    const normalizedAsciiArt = typeof settings.asciiArt === 'string'
+      ? settings.asciiArt
+      : DEFAULT_ASCII_ART_BANNER;
 
     const payload = {
       title: settings.title,
       backgroundTheme: settings.backgroundTheme || 'cosmic_dust',
       backgroundTint: settings.backgroundTint || 'none',
-      asciiArt: settings.asciiArt || '',
+      asciiArt: normalizedAsciiArt,
       trackingSnippet: settings.trackingSnippet ?? '',
+      owner: settings.owner ? settings.owner.toString() : null,
       createdAt: settings.createdAt,
       updatedAt: settings.updatedAt,
     };
-
-    console.log('GET settings - returning:', {
-      backgroundTheme: payload.backgroundTheme,
-      backgroundTint: payload.backgroundTint
-    });
 
     return NextResponse.json(payload);
   } catch (error) {
@@ -58,11 +58,25 @@ export async function PUT(request: NextRequest) {
 
     await connectToDatabase();
 
+    let settings = await Settings.findOne();
+
+    if (!settings) {
+      settings = new Settings({
+        title: 'My Whispers',
+        owner: user.userId,
+        asciiArt: DEFAULT_ASCII_ART_BANNER,
+      });
+      await settings.save();
+    }
+
+    if (settings.owner && settings.owner.toString() !== user.userId && user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
-    console.log('Received settings update:', {
-      backgroundTheme: body.backgroundTheme,
-      backgroundTint: body.backgroundTint
-    });
     const {
       title,
       backgroundTheme,
@@ -75,11 +89,9 @@ export async function PUT(request: NextRequest) {
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;
     if (backgroundTheme !== undefined) {
-      console.log('Saving backgroundTheme to database:', backgroundTheme);
       updateData.backgroundTheme = backgroundTheme;
     }
     if (backgroundTint !== undefined) {
-      console.log('Saving backgroundTint to database:', backgroundTint);
       updateData.backgroundTint = backgroundTint;
     }
     if (typeof asciiArt === 'string') {
@@ -90,8 +102,12 @@ export async function PUT(request: NextRequest) {
     if (typeof trackingSnippet === 'string') updateData.trackingSnippet = trackingSnippet.trim();
 
     // Use findOneAndUpdate with upsert to ensure the field is saved
-    const settings = await Settings.findOneAndUpdate(
-      {},
+    if (!settings.owner) {
+      updateData.owner = user.userId;
+    }
+
+    const updatedSettings = await Settings.findOneAndUpdate(
+      { _id: settings._id },
       { $set: updateData },
       {
         new: true,
@@ -101,27 +117,20 @@ export async function PUT(request: NextRequest) {
       }
     );
 
-    // Verify the save worked
-    console.log('Settings after save:', {
-      backgroundTheme: settings?.backgroundTheme,
-      title: settings?.title,
-    });
-
-    // Double-check by fetching again
-    const verifySettings = await Settings.findOne();
-    console.log('Verification - backgroundTheme in DB:', verifySettings?.backgroundTheme);
+    const normalizedAsciiArt = typeof updatedSettings.asciiArt === 'string'
+      ? updatedSettings.asciiArt
+      : DEFAULT_ASCII_ART_BANNER;
 
     const payload = {
-      title: settings.title,
-      backgroundTheme: settings.backgroundTheme || 'cosmic_dust',
-      backgroundTint: settings.backgroundTint || 'none',
-      asciiArt: settings.asciiArt || '',
-      trackingSnippet: settings.trackingSnippet ?? '',
-      createdAt: settings.createdAt,
-      updatedAt: settings.updatedAt,
+      title: updatedSettings.title,
+      backgroundTheme: updatedSettings.backgroundTheme || 'cosmic_dust',
+      backgroundTint: updatedSettings.backgroundTint || 'none',
+      asciiArt: normalizedAsciiArt,
+      trackingSnippet: updatedSettings.trackingSnippet ?? '',
+      owner: updatedSettings.owner ? updatedSettings.owner.toString() : null,
+      createdAt: updatedSettings.createdAt,
+      updatedAt: updatedSettings.updatedAt,
     };
-
-    console.log('Returning payload with backgroundTheme:', payload.backgroundTheme);
 
     return NextResponse.json(payload);
   } catch (error) {

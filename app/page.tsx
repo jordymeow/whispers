@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
 import WhisperCard from '@/components/whispers/WhisperCard';
-import { ComposeModal } from '@/components/ComposeModal';
 import { DEFAULT_ICON_COLOR, isValidIconColor, type IconColorName } from '@/lib/whispers';
 import { BackgroundProvider } from '@/components/BackgroundProvider';
+import { Toast } from '@/components/Toast';
 
 interface Post {
   _id: string;
@@ -14,6 +13,10 @@ interface Post {
   date: string;
   icon?: string | null;
   color?: IconColorName;
+  author?: {
+    displayName: string;
+    nickname: string;
+  } | null;
 }
 
 interface Settings {
@@ -30,10 +33,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showComposeModal, setShowComposeModal] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   const [timerProgress, setTimerProgress] = useState(0);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -123,6 +126,7 @@ export default function Home() {
               color: isValidIconColor(post.color)
                 ? (post.color as IconColorName)
                 : DEFAULT_ICON_COLOR,
+              author: post.author ?? null,
             }))
           );
         } else {
@@ -235,155 +239,79 @@ export default function Home() {
     return date.toLocaleDateString('en-US', options);
   };
 
-  const hasNoPosts = posts.length === 0;
-  const displayTitle = settings?.title || 'My Whispers';
+  const displayTitle = 'Whispers';
 
   if (loading || !settingsLoaded) {
     return (
-      <div className="page-center" style={{ background: '#0a0e1a', minHeight: '100vh' }}>
+      <div className="page-center" style={{ background: '#121a30', minHeight: '100vh' }}>
         <div className="loading-spinner"></div>
       </div>
     );
   }
 
   return (
-    <BackgroundProvider backgroundTheme={settings?.backgroundTheme} backgroundTint={settings?.backgroundTint || 'none'}>
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Compose Button */}
-      {isAuthenticated && !expandedId && (
-        <button
-          onClick={() => setShowComposeModal(true)}
-          className="btn-soft"
-          style={{
-            position: 'fixed',
-            top: '2rem',
-            right: '2rem',
-            width: '3rem',
-            height: '3rem',
-            borderRadius: '50%',
-            padding: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-          }}
-          aria-label="Compose new whisper"
-        >
-          <Plus size={24} />
-        </button>
-      )}
+    <>
+      <BackgroundProvider backgroundTheme={settings?.backgroundTheme} backgroundTint={settings?.backgroundTint || 'none'}>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Header */}
-      <header style={{ paddingTop: '4rem', paddingBottom: '4rem' }} className="animate-fade-up">
-        <div className="container">
-          <div className="page-header">
-            {settings?.asciiArt && (
-              <pre style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '0.8rem',
-                lineHeight: '1.2',
-                color: 'var(--text-secondary)',
-                textAlign: 'center',
-                opacity: 0.7,
-              }}>
-                {settings.asciiArt}
-              </pre>
-            )}
+      {/* Landing Hero */}
+      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 0' }}>
+        <div className="container animate-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: '3rem', alignItems: 'center', textAlign: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '42rem' }}>
             <p style={{
               fontFamily: 'var(--font-body)',
               textTransform: 'uppercase',
-              letterSpacing: '0.2em',
+              letterSpacing: '0.22em',
               color: 'var(--text-tertiary)',
+              fontSize: '0.75rem',
               marginBottom: 0,
-              fontSize: '0.8rem',
             }}>
-              Whispers from
+              A Cloud Of
             </p>
-            <h1>{displayTitle}</h1>
+            <h1 style={{
+              fontSize: '3.5rem',
+              letterSpacing: '0.04em',
+              fontFamily: 'var(--font-title)',
+              fontWeight: 400,
+            }}>
+              Whispers
+            </h1>
+            <p style={{
+              fontSize: '1.1rem',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.7,
+              maxWidth: '36rem',
+              margin: '0 auto',
+            }}>
+              Trade secret thoughts, soft confessions, and midnight letters in a shared, tranquil space.
+              Whisper something into the dark and hear new voices in return.
+            </p>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main style={{ flex: 1, paddingBottom: '4rem', display: 'flex', alignItems: hasNoPosts ? 'center' : 'flex-start' }}>
-        <div className="container animate-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
-          {hasNoPosts ? (
-            <div className="text-center">
-              <p style={{ fontSize: '1.125rem', marginBottom: '2rem' }}>
-                No whispers yet in the quiet hours...
-              </p>
-              {!isAuthenticated && (
-                <Link href="/setup" className="btn btn-primary">
-                  Begin Your Journey
-                </Link>
-              )}
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Link href={isAuthenticated ? '/admin' : '/register'} className="btn btn-primary" style={{ minWidth: '10rem' }}>
+              {isAuthenticated ? 'Open Studio' : 'Create Account'}
+            </Link>
+            {!isAuthenticated && (
+              <Link href="/login" className="btn btn-outline" style={{ minWidth: '10rem' }}>
+                Login
+              </Link>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '32rem' }}>
+            <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <span style={{ textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+                Whisper · Listen · Wander
+              </span>
             </div>
-          ) : (
-            <div style={{ display: expandedId ? 'none' : 'flex', flexDirection: 'column', gap: '2rem' }}>
-              {posts.map((post) => (
-                <WhisperCard
-                  key={post._id}
-                  whisper={{
-                    id: post._id,
-                    content: post.content,
-                    date: post.date,
-                    icon: post.icon,
-                    color: post.color,
-                    formattedDate: formatDate(post.date),
-                    siteName: displayTitle,
-                  }}
-                  onCardClick={() => {
-                    setExpandedId(post._id);
-                  }}
-                />
-              ))}
-            </div>
-          )}
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
+              This place is built for quiet storytelling. Each whisper rests in the cloud—no endless feed, just your voice and the voices you invite.
+            </p>
+          </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer style={{ padding: '2.25rem 0', borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-        <div className="container text-center animate-fade-up">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-            <p
-              style={{
-                fontSize: '0.75rem',
-                color: 'rgba(210, 214, 239, 0.42)',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                display: 'flex',
-                gap: '0.4rem',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-              }}
-            >
-              <Link href="/midnight-whisper" style={{ color: 'inherit' }}>
-                Midnight Whispers
-              </Link>
-              <span style={{ opacity: 0.6 }}>·</span>
-              <a
-                href="https://github.com/jordymeow/midnight-whisper"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'inherit' }}
-              >
-                GitHub
-              </a>
-              {isAuthenticated && (
-                <>
-                  <span style={{ opacity: 0.6 }}>·</span>
-                  <Link href="/admin" style={{ color: 'inherit' }}>
-                    Admin
-                  </Link>
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-      </footer>
       {expandedWhisper && (
         <>
           <div
@@ -405,7 +333,7 @@ export default function Home() {
                 color: expandedWhisper.color,
                 formattedDate: formatDate(expandedWhisper.date),
                 siteName: displayTitle,
-                authorName: displayTitle,
+                authorName: expandedWhisper.author?.displayName ?? displayTitle,
               }}
               showAuthor={true}
             />
@@ -474,15 +402,17 @@ export default function Home() {
         </>
       )}
 
-      {/* Compose Modal */}
-      <ComposeModal
-        isOpen={showComposeModal}
-        onClose={() => setShowComposeModal(false)}
-        onSuccess={() => {
-          fetchPosts();
-        }}
-      />
-      </div>
-    </BackgroundProvider>
+        </div>
+      </BackgroundProvider>
+
+      {/* Compose Button - only for authenticated users on landing */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </>
   );
 }

@@ -34,7 +34,6 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log('Login response:', data);
 
       if (!res.ok) {
         setError(data.error || 'Login failed. Please check your credentials.');
@@ -42,7 +41,6 @@ export default function LoginPage() {
       }
 
       if (data.success && data.redirectTo) {
-        console.log('Login successful, redirecting...');
         router.replace(data.redirectTo);
         router.refresh();
         return;
@@ -119,6 +117,9 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center mt-4">
+          <Link href="/register" className="nav-link" style={{ marginRight: '1rem' }}>
+            Need an account?
+          </Link>
           <Link href="/" className="nav-link">
             ← Back to whispers
           </Link>

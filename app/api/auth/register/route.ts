@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { connectToDatabase } from '@/lib/mongodb';
 import User, { type IUser } from '@/models/User';
-import Settings from '@/models/Settings';
-import { generateToken } from '@/lib/auth';
+import { generateToken, setAuthCookie } from '@/lib/auth';
 import { generateUniqueNickname, sanitizeDisplayName } from '@/lib/users';
 
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-
-    const userCount = await User.countDocuments();
-    if (userCount > 0) {
-      return NextResponse.json(
-        { error: 'Setup has already been completed' },
-        { status: 400 }
-      );
-    }
 
     const { username, password, name, email } = await request.json();
 
@@ -31,6 +21,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Password must be at least 6 characters' },
         { status: 400 }
+      );
+    }
+
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'Username is already taken' },
+        { status: 409 }
       );
     }
 
@@ -51,15 +49,10 @@ export async function POST(request: NextRequest) {
       email,
       displayName,
       nickname,
-      role: 'admin',
+      role: 'user',
     }) as IUser;
-    await user.save();
 
-    const settings = new Settings({
-      title: 'My Whispers',
-      trackingSnippet: '',
-    });
-    await settings.save();
+    await user.save();
 
     const token = generateToken({
       userId: user._id.toString(),
@@ -70,25 +63,25 @@ export async function POST(request: NextRequest) {
       role: user.role,
     });
 
-    // Set cookie using Next.js cookies() function
-    const cookieStore = await cookies();
-    cookieStore.set('midnight-auth', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Setup completed successfully',
-      redirectTo: '/admin',
-    });
+    return setAuthCookie(
+      NextResponse.json({
+        success: true,
+        message: 'Account created',
+        redirectTo: '/',
+        user: {
+          userId: user._id.toString(),
+          username: user.username,
+          displayName: user.displayName,
+          nickname: user.nickname,
+          role: user.role,
+        },
+      }),
+      token
+    );
   } catch (error) {
-    console.error('Setup error:', error);
+    console.error('Register error:', error);
     return NextResponse.json(
-      { error: 'Failed to complete setup' },
+      { error: 'Failed to create account. Please try again.' },
       { status: 500 }
     );
   }

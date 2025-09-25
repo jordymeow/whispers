@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
+import { connectToDatabase } from '@/lib/mongodb';
+import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,11 +17,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ authenticated: false });
     }
 
+    await connectToDatabase();
+    const dbUser = await User.findById(user.userId).lean();
+
+    if (!dbUser) {
+      return NextResponse.json({ authenticated: false });
+    }
+
     return NextResponse.json({
       authenticated: true,
       user: {
-        userId: user.userId,
-        username: user.username,
+        userId: dbUser._id.toString(),
+        username: dbUser.username,
+        email: dbUser.email,
+        displayName: dbUser.displayName,
+        nickname: dbUser.nickname,
+        role: dbUser.role,
       },
     });
   } catch (error) {

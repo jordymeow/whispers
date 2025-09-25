@@ -7,6 +7,7 @@ export interface IPost extends Document {
   icon?: string | null;
   color: string;
   isDraft: boolean;
+  userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +37,11 @@ const PostSchema = new Schema<IPost>(
     isDraft: {
       type: Boolean,
       default: false,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
   },
   {

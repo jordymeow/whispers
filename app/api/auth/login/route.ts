@@ -37,13 +37,25 @@ export async function POST(request: NextRequest) {
     const token = generateToken({
       userId: user._id.toString(),
       username: user.username,
+      email: user.email,
+      displayName: user.displayName,
+      nickname: user.nickname,
+      role: user.role,
     });
 
     return setAuthCookie(
       NextResponse.json({
         success: true,
         message: 'Login successful',
-        redirectTo: '/admin',
+        redirectTo: user.role === 'admin' ? '/admin' : '/',
+        user: {
+          userId: user._id.toString(),
+          username: user.username,
+          email: user.email,
+          displayName: user.displayName,
+          nickname: user.nickname,
+          role: user.role,
+        },
       }),
       token
     );

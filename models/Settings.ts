@@ -1,4 +1,5 @@
 import mongoose, { Document, Model, Schema } from 'mongoose';
+import { DEFAULT_ASCII_ART_BANNER } from '@/lib/siteDefaults';
 
 export interface ISettings extends Document {
   title: string;
@@ -6,6 +7,7 @@ export interface ISettings extends Document {
   backgroundTint?: string;
   asciiArt?: string;
   trackingSnippet: string;
+  owner?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,12 +33,17 @@ const SettingsSchema = new Schema<ISettings>(
     asciiArt: {
       type: String,
       required: false,
-      default: '',
+      default: DEFAULT_ASCII_ART_BANNER,
       maxlength: 2000, // ~20 rows with average width
     },
     trackingSnippet: {
       type: String,
       default: '',
+    },
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
     },
   },
   {

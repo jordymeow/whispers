@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
+import { ReactNode, useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Toast } from '@/components/Toast';
@@ -12,7 +12,6 @@ import {
   X,
   PenSquare,
   ScrollText,
-  Cog,
   Shield,
 } from 'lucide-react';
 import WhisperCard from '@/components/whispers/WhisperCard';
@@ -23,10 +22,24 @@ import {
   isValidIconColor,
   getIconColorStyles,
 } from '@/lib/whispers';
-import { BACKGROUND_THEMES, DEFAULT_BACKGROUND_THEME, type BackgroundThemeKey } from '@/lib/backgroundThemes';
+import {
+  BACKGROUND_THEMES,
+  BACKGROUND_TINTS,
+  DEFAULT_BACKGROUND_THEME,
+  DEFAULT_BACKGROUND_TINT,
+  type BackgroundThemeKey,
+  type BackgroundTint,
+} from '@/lib/backgroundThemes';
 import { BackgroundProvider } from '@/components/BackgroundProvider';
+import { ADMIN_ICON_CATEGORIES, ICON_SYNONYMS } from '@/lib/whisperIcons';
+import { DEFAULT_ASCII_ART_BANNER } from '@/lib/siteDefaults';
 
 const RainEffect = lazy(() => import('@/components/RainEffect').then(m => ({ default: m.RainEffect })));
+
+interface PostAuthor {
+  displayName: string;
+  nickname: string;
+}
 
 interface Post {
   _id: string;
@@ -35,13 +48,68 @@ interface Post {
   icon?: string | null;
   color?: IconColorName;
   isDraft?: boolean;
+  author?: PostAuthor | null;
 }
 
-interface Settings {
-  title: string;
-  backgroundTheme?: string;
-  backgroundHue?: number;
-  trackingSnippet?: string;
+interface CurrentUser {
+  userId: string;
+  username: string;
+  displayName: string;
+  nickname: string;
+  bio: string;
+  role: 'admin' | 'user';
+  backgroundTheme: BackgroundThemeKey;
+  backgroundTint: BackgroundTint;
+  asciiArtBanner: string;
+}
+
+interface AdminStatsUserSummary {
+  nickname: string;
+  displayName: string;
+  createdAt: string;
+  postCount?: number;
+}
+
+interface AdminStats {
+  totalUsers: number;
+  topActive: AdminStatsUserSummary[];
+  recentUsers: AdminStatsUserSummary[];
+}
+
+// Shared flex layout so paired admin actions stay aligned.
+const ButtonRow = ({ children, gap }: { children: ReactNode; gap?: string }) => (
+  <div className="admin-button-row" style={gap ? { gap } : undefined}>
+    {children}
+  </div>
+);
+
+function normalizeCurrentUser(user: any): CurrentUser {
+  const theme =
+    typeof user.backgroundTheme === 'string' && user.backgroundTheme in BACKGROUND_THEMES
+      ? (user.backgroundTheme as BackgroundThemeKey)
+      : DEFAULT_BACKGROUND_THEME;
+
+  const tint =
+    typeof user.backgroundTint === 'string' && BACKGROUND_TINTS.includes(user.backgroundTint as BackgroundTint)
+      ? (user.backgroundTint as BackgroundTint)
+      : DEFAULT_BACKGROUND_TINT;
+
+  const banner =
+    typeof user.asciiArtBanner === 'string' && user.asciiArtBanner.trim().length > 0
+      ? user.asciiArtBanner
+      : DEFAULT_ASCII_ART_BANNER;
+
+  return {
+    userId: user.userId,
+    username: user.username,
+    displayName: user.displayName,
+    nickname: user.nickname,
+    bio: user.bio ?? '',
+    role: user.role,
+    backgroundTheme: theme,
+    backgroundTint: tint,
+    asciiArtBanner: banner,
+  };
 }
 
 // Removed header and whisper themes - keeping it simple
@@ -54,7 +122,7 @@ type IconName = keyof typeof icons;
 export default function AdminPage() {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [newPost, setNewPost] = useState('');
   // Initialize with today's date in YYYY-MM-DD format
   const [postDate, setPostDate] = useState(() => {
@@ -66,23 +134,30 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [activeTab, setActiveTab] = useState<'drafts' | 'published' | 'new' | 'profile' | 'admin'>('new');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Settings form
-  const [editTitle, setEditTitle] = useState('');
-  const [asciiArt, setAsciiArt] = useState('');
+  const [asciiArt, setAsciiArt] = useState(DEFAULT_ASCII_ART_BANNER);
   const [trackingSnippet, setTrackingSnippet] = useState('');
   const [selectedTheme, setSelectedTheme] = useState<BackgroundThemeKey>(DEFAULT_BACKGROUND_THEME);
-  const [backgroundTint, setBackgroundTint] = useState<string>('none');
+  const [backgroundTint, setBackgroundTint] = useState<BackgroundTint>(DEFAULT_BACKGROUND_TINT);
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<IconColorName>(DEFAULT_ICON_COLOR);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
   const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [profileDisplayName, setProfileDisplayName] = useState('');
+  const [profileNickname, setProfileNickname] = useState('');
+  const [profileBio, setProfileBio] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [appearanceSaving, setAppearanceSaving] = useState(false);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const selectedPreset = useMemo(() => getIconColorStyles(selectedColor), [selectedColor]);
 
   // Color tint options for background - matching the actual background colors
-  const COLOR_TINTS = [
+  const COLOR_TINTS: Array<{ value: BackgroundTint; label: string; color: string }> = [
     { value: 'none', label: 'None', color: 'rgb(10, 14, 26)' },
     { value: 'purple', label: 'Purple', color: 'rgb(25, 10, 35)' },
     { value: 'blue', label: 'Blue', color: 'rgb(10, 20, 40)' },
@@ -94,57 +169,6 @@ export default function AdminPage() {
     { value: 'pink', label: 'Pink', color: 'rgb(30, 10, 25)' },
     { value: 'indigo', label: 'Indigo', color: 'rgb(15, 10, 35)' },
   ];
-
-  // Curated icon categories for better organization
-  const ICON_CATEGORIES = useMemo(() => ({
-    'Night & Dreams': ['Moon', 'MoonStar', 'Stars', 'Sparkles', 'Star', 'CloudMoon', 'Zap'],
-    'Love & Emotions': ['Heart', 'HeartHandshake', 'HeartCrack', 'HeartPulse', 'Smile', 'Frown', 'Meh', 'Angry'],
-    'Thinking & Mind': ['Brain', 'Lightbulb', 'BrainCircuit', 'BrainCog', 'Zap', 'CircuitBoard', 'Cpu', 'Binary'],
-    'Life & Nature': ['Flower', 'Flower2', 'Trees', 'TreePalm', 'TreePine', 'Leaf', 'Sun', 'Sunrise', 'Sunset', 'Cloud', 'CloudRain', 'CloudSnow', 'Snowflake', 'Wind', 'Waves', 'Mountain', 'MountainSnow'],
-    'Sports & Activity': ['Activity', 'Bike', 'PersonStanding', 'Medal', 'Trophy', 'Target', 'Dumbbell', 'Footprints', 'Award', 'Swords'],
-    'Ideas & Creativity': ['Lightbulb', 'Palette', 'Brush', 'PenTool', 'Pencil', 'PenSquare', 'Feather', 'Wand2', 'Sparkle', 'Paintbrush'],
-    'Technology': ['Laptop', 'Monitor', 'Smartphone', 'Tablet', 'Cpu', 'HardDrive', 'Wifi', 'Code', 'Terminal', 'Binary', 'Bug', 'GitBranch', 'Github', 'Globe', 'Database', 'Server'],
-    'Music & Art': ['Music', 'Music2', 'Music3', 'Music4', 'Mic', 'Headphones', 'Radio', 'Volume2', 'Palette', 'Brush'],
-    'Writing & Books': ['Book', 'BookOpen', 'Library', 'Newspaper', 'FileText', 'NotebookPen', 'NotebookText', 'ScrollText', 'Quote', 'PenSquare', 'Edit'],
-    'Time & Calendar': ['Clock', 'Clock2', 'Clock3', 'Timer', 'Hourglass', 'Calendar', 'CalendarDays', 'Watch', 'AlarmClock', 'Stopwatch'],
-    'Communication': ['MessageCircle', 'MessageSquare', 'Mail', 'Send', 'AtSign', 'Phone', 'Video', 'Users', 'UserPlus', 'Share2'],
-    'Travel & Places': ['MapPin', 'Map', 'Compass', 'Navigation', 'Plane', 'Car', 'Ship', 'Train', 'Home', 'Building', 'Building2', 'Anchor'],
-    'Food & Drink': ['Coffee', 'Beer', 'Wine', 'Pizza', 'Utensils', 'ChefHat', 'Cookie', 'Apple', 'Cherry'],
-    'Weather': ['Cloud', 'CloudRain', 'CloudSnow', 'CloudLightning', 'CloudDrizzle', 'CloudFog', 'Umbrella', 'Thermometer'],
-    'Celebration': ['PartyPopper', 'Gift', 'Cake', 'Sparkles', 'Star', 'Award', 'Crown'],
-  }), []);
-
-  const ICON_SYNONYMS: Partial<Record<IconName, string[]>> = useMemo(
-    () => ({
-      MoonStar: ['moon', 'night', 'dream', 'sleep', 'midnight', 'lunar', 'star'],
-      Moon: ['night', 'dark', 'lunar', 'sleep'],
-      Stars: ['constellation', 'night', 'sky'],
-      Heart: ['love', 'favorite', 'care', 'emotion'],
-      Brain: ['mind', 'think', 'thought', 'intelligence'],
-      Lightbulb: ['idea', 'bright', 'innovation', 'eureka'],
-      Flower: ['bloom', 'nature', 'garden', 'spring'],
-      Sun: ['day', 'bright', 'warm', 'light'],
-      Music: ['song', 'melody', 'audio', 'tune'],
-      Book: ['story', 'novel', 'read', 'literature'],
-      Clock: ['time', 'hour', 'minute', 'schedule'],
-      MessageCircle: ['chat', 'message', 'talk', 'bubble', 'conversation'],
-      PenSquare: ['edit', 'write', 'compose', 'draft', 'note'],
-      Feather: ['poetry', 'write', 'quill', 'story'],
-      Sparkles: ['shine', 'glimmer', 'twinkle', 'magic'],
-      Camera: ['photo', 'picture', 'snapshot'],
-      Sunrise: ['morning', 'dawn'],
-      Sunset: ['evening', 'dusk'],
-      CloudMoon: ['night', 'weather', 'dream'],
-      Snowflake: ['cold', 'winter', 'snow'],
-      Flame: ['fire', 'heat', 'passion', 'burn'],
-      NotebookPen: ['journal', 'notes', 'write', 'log'],
-      NotebookText: ['notes', 'pages', 'journal'],
-      Quote: ['quote', 'speech', 'saying'],
-      Bookmark: ['save', 'mark', 'favorite'],
-      Timer: ['time', 'clock', 'alarm', 'countdown'],
-    }),
-    []
-  );
 
   const iconEntries = useMemo(
     () =>
@@ -169,7 +193,7 @@ export default function AdminPage() {
       );
       return { name, IconComponent, tokens };
     });
-  }, [iconEntries, ICON_SYNONYMS]);
+  }, [iconEntries]);
 
   const filteredIcons = useMemo(() => {
     const query = iconSearch.trim().toLowerCase();
@@ -188,14 +212,27 @@ export default function AdminPage() {
     return <IconComponent size={props?.size ?? 20} strokeWidth={props?.strokeWidth ?? 1.6} />;
   };
 
-const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | 'admin'; label: string; icon: LucideIcon }> = useMemo(
-  () => [
-    { id: 'new', label: 'Compose', icon: PenSquare },
-    { id: 'drafts', label: 'Drafts', icon: icons.MoonStar },
-    { id: 'published', label: 'Published', icon: icons.MoonStar },
-  ],
-  []
-);
+  const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | 'admin'; label: string; icon: LucideIcon }> = useMemo(
+    () => {
+      const tabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | 'admin'; label: string; icon: LucideIcon }> = [
+        { id: 'new', label: 'Compose', icon: PenSquare },
+        { id: 'drafts', label: 'Drafts', icon: icons.MoonStar },
+        { id: 'published', label: 'Published', icon: icons.MoonStar },
+        { id: 'profile', label: 'Profile', icon: ScrollText },
+      ];
+      if (currentUser?.role === 'admin') {
+        tabs.push({ id: 'admin', label: 'Admin', icon: Shield });
+      }
+      return tabs;
+    },
+    [currentUser?.role]
+  );
+
+  const firstRightAlignedIndex = useMemo(() => {
+    const profileIndex = navigationTabs.findIndex(({ id }) => id === 'profile');
+    if (profileIndex !== -1) return profileIndex;
+    return navigationTabs.findIndex(({ id }) => id === 'admin');
+  }, [navigationTabs]);
 
   const normalisePost = (post: any): Post => ({
     _id: post._id,
@@ -204,7 +241,19 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
     icon: typeof post.icon === 'string' && post.icon.length ? post.icon : null,
     color: isValidIconColor(post.color) ? (post.color as IconColorName) : DEFAULT_ICON_COLOR,
     isDraft: post.isDraft || false,
+    author: post.author
+      ? {
+          displayName: post.author.displayName ?? 'Unknown Whisperer',
+          nickname: post.author.nickname ?? '',
+        }
+      : null,
   });
+
+  const canModifyPost = (post: Post) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    return post.author?.nickname === currentUser.nickname;
+  };
 
   const resetComposer = () => {
     setEditingPost(null);
@@ -217,15 +266,19 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
   };
 
   useEffect(() => {
-    resetComposer();
-    Promise.all([
-      checkAuth(),
-      fetchPosts(),
-      fetchSettings()
-    ]).finally(() => setInitialLoading(false));
+    const initialise = async () => {
+      resetComposer();
+      const authed = await checkAuth();
+      if (!authed) return;
+      const profile = await fetchCurrentUser();
+      await fetchPosts();
+      await fetchAnalytics();
+    };
+
+    initialise().finally(() => setInitialLoading(false));
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = async (): Promise<boolean> => {
     try {
       const res = await fetch('/api/auth/session', {
         credentials: 'include',
@@ -234,13 +287,16 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
       const data = await res.json();
       if (!data.authenticated) {
         router.push('/login');
+        return false;
       }
+      return true;
     } catch (error) {
       router.push('/login');
+      return false;
     }
   };
 
-  const fetchSettings = async () => {
+  const fetchAnalytics = async () => {
     try {
       const res = await fetch('/api/settings', {
         credentials: 'include',
@@ -248,22 +304,62 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
       });
       if (res.ok) {
         const data = await res.json();
-        setSettings(data);
-        setEditTitle(data.title || 'My Whispers');
-        setAsciiArt(data.asciiArt || '');
-        setBackgroundTint(data.backgroundTint || 'none');
-        // Check if the backgroundTheme is a valid key
-        const savedBgTheme = data.backgroundTheme;
-        if (savedBgTheme && savedBgTheme in BACKGROUND_THEMES) {
-          setSelectedTheme(savedBgTheme as BackgroundThemeKey);
-        } else {
-          setSelectedTheme(DEFAULT_BACKGROUND_THEME);
-        }
         setTrackingSnippet(typeof data.trackingSnippet === 'string' ? data.trackingSnippet : '');
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
     }
+  };
+
+  const fetchAdminStats = async () => {
+    setStatsLoading(true);
+    try {
+      const res = await fetch('/api/admin/stats', {
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      } else {
+        setStats(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch admin stats:', error);
+      setStats(null);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/users/me', {
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data?.user) {
+        const profile = normalizeCurrentUser(data.user);
+        setCurrentUser(profile);
+        setProfileDisplayName(profile.displayName);
+        setProfileNickname(profile.nickname);
+        setProfileBio(profile.bio ?? '');
+        setSelectedTheme(profile.backgroundTheme);
+        setBackgroundTint(profile.backgroundTint);
+        setAsciiArt(profile.asciiArtBanner);
+        if (profile.role === 'admin') {
+          fetchAdminStats();
+        } else {
+          setStats(null);
+        }
+        return profile;
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+    }
+    return null;
   };
 
   const fetchPosts = async () => {
@@ -278,6 +374,50 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
       }
     } catch (error) {
       console.error('Failed to fetch posts:', error);
+    }
+  };
+
+  const handleUpdateProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!currentUser) return;
+    setError('');
+    setProfileSaving(true);
+
+    try {
+      const res = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          displayName: profileDisplayName,
+          nickname: profileNickname,
+          bio: profileBio,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to update profile');
+        return;
+      }
+
+      if (data.user) {
+        const updated = normalizeCurrentUser(data.user);
+        setCurrentUser(updated);
+        setProfileDisplayName(updated.displayName);
+        setProfileNickname(updated.nickname);
+        setProfileBio(updated.bio);
+        setSelectedTheme(updated.backgroundTheme);
+        setBackgroundTint(updated.backgroundTint);
+        setAsciiArt(updated.asciiArtBanner);
+      }
+
+      setToast({ message: 'Profile updated', type: 'success' });
+    } catch (error) {
+      console.error('Profile update error:', error);
+      setError('Failed to update profile');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -300,10 +440,6 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
         color: selectedColor,
         isDraft,
       };
-
-      console.log('Saving post with isDraft:', isDraft, 'Payload:', payload);
-
-      const wasEditing = Boolean(editingPost);
 
       if (editingPost) {
         const res = await fetch(`/api/posts/${editingPost._id}`, {
@@ -346,6 +482,7 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
   };
 
   const handleStartEdit = (post: Post) => {
+    if (!canModifyPost(post)) return;
     setEditingPost(post);
     setActiveTab('new');
     setNewPost(post.content);
@@ -383,6 +520,7 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
     if (!confirm('Delete this whisper?')) return;
 
     try {
+      setDeletingId(id);
       const res = await fetch(`/api/posts/${id}`, {
         method: 'DELETE',
         credentials: 'include',
@@ -395,71 +533,82 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
         setError('');
         setToast({ message: 'Whisper deleted', type: 'success' });
         fetchPosts();
+      } else {
+        const data = await res.json().catch(() => null);
+        const message = data?.error || 'Failed to delete whisper';
+        setToast({ message, type: 'error' });
       }
     } catch (error) {
       console.error('Failed to delete post:', error);
+      setToast({ message: 'Failed to delete whisper', type: 'error' });
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const handleUpdateSettings = async (e: React.FormEvent) => {
+  const handleUpdateAppearance = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setAppearanceSaving(true);
 
     try {
-      const payload = {
-        title: editTitle || 'My Whispers',
-        backgroundTheme: selectedTheme,
-        backgroundTint,
-        asciiArt,
-        trackingSnippet,
-      };
-      const res = await fetch('/api/settings', {
+      const res = await fetch('/api/users/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          backgroundTheme: selectedTheme,
+          backgroundTint,
+          asciiArtBanner: asciiArt,
+        }),
       });
 
-      if (res.ok) {
-        const updatedData = await res.json();
-        setSettings(updatedData);
-        setToast({ message: 'Settings saved', type: 'success' });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || 'Failed to update appearance');
+        return;
       }
+
+      if (data?.user) {
+        const normalized = normalizeCurrentUser(data.user);
+        setSelectedTheme(normalized.backgroundTheme);
+        setBackgroundTint(normalized.backgroundTint);
+        setAsciiArt(normalized.asciiArtBanner);
+        setCurrentUser(normalized);
+      }
+
+      setToast({ message: 'Appearance updated', type: 'success' });
     } catch (error) {
-      setError('Failed to update settings');
+      console.error('Appearance update error:', error);
+      setError('Failed to update appearance');
     } finally {
-      setLoading(false);
+      setAppearanceSaving(false);
     }
   };
 
   const handleUpdateAnalytics = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentUser?.role !== 'admin') {
+      setError('Only administrators can update analytics');
+      return;
+    }
     setError('');
     setLoading(true);
 
     try {
-      // First fetch current settings to preserve them
-      const currentRes = await fetch('/api/settings', {
-        credentials: 'include',
-        cache: 'no-store',
-      });
-      const currentSettings = currentRes.ok ? await currentRes.json() : {};
-
-      // Update only analytics, preserving other settings
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          ...currentSettings,
-          trackingSnippet,
-        }),
+        body: JSON.stringify({ trackingSnippet }),
       });
 
       if (res.ok) {
         setToast({ message: 'Analytics updated', type: 'success' });
-        fetchSettings();
+        fetchAnalytics();
+      } else {
+        const data = await res.json().catch(() => null);
+        setError(data?.error || 'Failed to update analytics');
       }
     } catch (error) {
       setError('Failed to update analytics');
@@ -499,7 +648,7 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
 
   if (initialLoading) {
     return (
-      <div className="page-center" style={{ background: '#0a0e1a', minHeight: '100vh' }}>
+      <div className="page-center" style={{ background: '#121a30', minHeight: '100vh' }}>
         <div className="loading-spinner"></div>
       </div>
     );
@@ -522,7 +671,7 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1 style={{ fontSize: '1.35rem', fontFamily: 'var(--font-title)', fontWeight: 400 }}>
               <Link
-                href="/"
+                href={currentUser ? `/u/${currentUser.nickname}` : '/'}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -531,7 +680,7 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
                   textDecoration: 'none',
                 }}
               >
-                {settings?.title || editTitle || ''}
+                Whispers
               </Link>
             </h1>
             <button
@@ -562,9 +711,10 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
       <main style={{ flex: 1, padding: '2rem 0' }}>
         <div className="container animate-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           {/* Tabs */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', marginBottom: '2rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: '1.25rem' }}>
-              {navigationTabs.map(({ id, label, icon: TabIcon }) => (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '2rem' }}>
+            {navigationTabs.map(({ id, label, icon: TabIcon }, index) => {
+              const pushRight = firstRightAlignedIndex !== -1 && index === firstRightAlignedIndex;
+              return (
                 <button
                   key={id}
                   onClick={() => setActiveTab(id)}
@@ -573,6 +723,7 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
                     border: 'none',
                     padding: '0.6rem 0',
                     marginBottom: '-1px',
+                    marginLeft: pushRight ? 'auto' : undefined,
                     borderBottom: activeTab === id ? '2px solid var(--text-primary)' : '2px solid transparent',
                     color: activeTab === id ? 'var(--text-primary)' : 'var(--text-secondary)',
                     cursor: 'pointer',
@@ -587,52 +738,8 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
                   <TabIcon size={16} />
                   {label}
                 </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: '1.25rem' }}>
-              <button
-                onClick={() => setActiveTab('profile')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '0.6rem 0',
-                  marginBottom: '-1px',
-                  borderBottom: activeTab === 'profile' ? '2px solid var(--text-primary)' : '2px solid transparent',
-                  color: activeTab === 'profile' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  letterSpacing: '0.04em',
-                  transition: 'color 0.2s ease, border-bottom 0.2s ease',
-                }}
-              >
-                <Cog size={16} />
-                Profile
-              </button>
-              <button
-                onClick={() => setActiveTab('admin')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '0.6rem 0',
-                  marginBottom: '-1px',
-                  borderBottom: activeTab === 'admin' ? '2px solid var(--text-primary)' : '2px solid transparent',
-                  color: activeTab === 'admin' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  letterSpacing: '0.04em',
-                  transition: 'color 0.2s ease, border-bottom 0.2s ease',
-                }}
-              >
-                <Shield size={16} />
-                Admin
-              </button>
-            </div>
+              );
+            })}
           </div>
 
           {/* Messages */}
@@ -730,62 +837,60 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '1rem', flexDirection: 'row' }}>
-                  {editingPost ? (
-                    <>
-                      {editingPost.isDraft ? (
-                        <>
-                          <button
-                            type="button"
-                            className="btn-outline"
-                            onClick={(e) => handleSavePost(e, true)}
-                            disabled={loading || !newPost.trim()}
-                            style={{ flex: 1, opacity: !newPost.trim() ? 0.5 : 1 }}
-                          >
-                            {loading ? 'Saving…' : 'Save as Draft'}
-                          </button>
-                          <button
-                            type="submit"
-                            className="btn-soft"
-                            style={{ flex: 1, opacity: !newPost.trim() ? 0.5 : 1 }}
-                            disabled={loading || !newPost.trim()}
-                          >
-                            {loading ? 'Publishing…' : 'Publish'}
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="submit"
-                          className="btn-soft"
-                          style={{ width: '100%', opacity: !newPost.trim() ? 0.5 : 1 }}
-                          disabled={loading || !newPost.trim()}
-                        >
-                          {loading ? 'Updating…' : 'Update'}
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
+                {editingPost ? (
+                  editingPost.isDraft ? (
+                    <ButtonRow gap="1rem">
                       <button
                         type="button"
                         className="btn-outline"
                         onClick={(e) => handleSavePost(e, true)}
                         disabled={loading || !newPost.trim()}
-                        style={{ flex: 1, opacity: !newPost.trim() ? 0.5 : 1 }}
+                        style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
                       >
                         {loading ? 'Saving…' : 'Save as Draft'}
                       </button>
                       <button
                         type="submit"
                         className="btn-soft"
-                        style={{ flex: 1, opacity: !newPost.trim() ? 0.5 : 1 }}
+                        style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
                         disabled={loading || !newPost.trim()}
                       >
                         {loading ? 'Publishing…' : 'Publish'}
                       </button>
-                    </>
-                  )}
-                </div>
+                    </ButtonRow>
+                  ) : (
+                    <ButtonRow gap="1rem">
+                      <button
+                        type="submit"
+                        className="btn-soft"
+                        style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
+                        disabled={loading || !newPost.trim()}
+                      >
+                        {loading ? 'Updating…' : 'Update'}
+                      </button>
+                    </ButtonRow>
+                  )
+                ) : (
+                  <ButtonRow gap="1rem">
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={(e) => handleSavePost(e, true)}
+                      disabled={loading || !newPost.trim()}
+                      style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
+                    >
+                      {loading ? 'Saving…' : 'Save as Draft'}
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-soft"
+                      style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
+                      disabled={loading || !newPost.trim()}
+                    >
+                      {loading ? 'Publishing…' : 'Publish'}
+                    </button>
+                  </ButtonRow>
+                )}
               </form>
             </div>
           )}
@@ -806,23 +911,28 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
                         icon: post.icon,
                         color: post.color,
                         formattedDate: formatDate(post.date),
+                        authorName: post.author?.displayName,
                       }}
                       highlight={editingPost?._id === post._id}
+                      showAuthor={Boolean(post.author)}
                       actions={(
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <ButtonRow>
                           <button
                             onClick={() => handleStartEdit(post)}
                             className="btn-outline"
+                            disabled={!canModifyPost(post) || deletingId === post._id}
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeletePost(post._id)}
                             className="btn-outline"
+                            disabled={!canModifyPost(post) || deletingId === post._id}
+                            aria-busy={deletingId === post._id}
                           >
-                            Delete
+                            {deletingId === post._id ? 'Deleting…' : 'Delete'}
                           </button>
-                        </div>
+                        </ButtonRow>
                       )}
                     />
                   ))}
@@ -847,14 +957,16 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
                         icon: post.icon,
                         color: post.color,
                         formattedDate: formatDate(post.date),
+                        authorName: post.author?.displayName,
                       }}
                       highlight={editingPost?._id === post._id}
+                      showAuthor={Boolean(post.author)}
                       actions={(
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <ButtonRow>
                           <button
                             onClick={() => handleStartEdit(post)}
                             className="btn-outline"
-                            disabled={loading}
+                            disabled={!canModifyPost(post) || loading || deletingId === post._id}
                           >
                             Edit
                           </button>
@@ -862,11 +974,12 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
                             onClick={() => handleDeletePost(post._id)}
                             className="btn-outline"
                             style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: 'rgba(239, 68, 68, 0.9)' }}
-                            disabled={loading}
+                            disabled={!canModifyPost(post) || loading || deletingId === post._id}
+                            aria-busy={deletingId === post._id}
                           >
-                            Delete
+                            {deletingId === post._id ? 'Deleting…' : 'Delete'}
                           </button>
-                        </div>
+                        </ButtonRow>
                       )}
                     />
                   ))}
@@ -876,177 +989,291 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
           )}
 
           {activeTab === 'profile' && (
-            <div className="card admin-tab-content">
-              <form onSubmit={handleUpdateSettings} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-                <div>
-                  <h3 className="settings-section">Identity</h3>
-                  <div className="form-field">
-                    <label htmlFor="title">Name</label>
-                    <input
-                      id="title"
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="settings-section">Appearance</h3>
-
-                  <div className="form-field">
-                    <label htmlFor="theme">Theme</label>
-                    <select
-                      id="theme"
-                      value={selectedTheme}
-                      onChange={(e) => setSelectedTheme(e.target.value as BackgroundThemeKey)}
-                      disabled={loading}
-                    >
-                      {Object.entries(BACKGROUND_THEMES).map(([key, preset]) => (
-                        <option key={key} value={key}>
-                          {preset.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-field">
-                    <label>
-                      Color Tint
-                    </label>
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.5rem',
-                      marginTop: '0.5rem',
-                      flexWrap: 'wrap',
-                    }}>
-                      {COLOR_TINTS.map((tint) => (
-                        <button
-                          key={tint.value}
-                          type="button"
-                          onClick={() => setBackgroundTint(tint.value)}
-                          style={{
-                            width: '3rem',
-                            height: '3rem',
-                            borderRadius: '0.75rem',
-                            border: backgroundTint === tint.value
-                              ? '2px solid rgba(158, 160, 255, 0.8)'
-                              : '1px solid rgba(158, 160, 255, 0.3)',
-                            background: tint.color,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            transform: backgroundTint === tint.value ? 'scale(1.1)' : 'scale(1)',
-                            position: 'relative',
-                          }}
-                          title={tint.label}
-                          disabled={loading}
-                        >
-                          {tint.value === 'none' && (
-                            <span style={{
-                              position: 'absolute',
-                              top: '50%',
-                              left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              fontSize: '0.65rem',
-                              color: 'rgba(255, 255, 255, 0.5)',
-                              fontWeight: 600,
-                            }}>
-                              OFF
-                            </span>
-                          )}
-                        </button>
-                      ))}
+            <div className="admin-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="card">
+                <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <h3 className="settings-section">Identity</h3>
+                    <div className="form-field">
+                      <label htmlFor="displayName">Display name</label>
+                      <input
+                        id="displayName"
+                        type="text"
+                        value={profileDisplayName}
+                        onChange={(e) => setProfileDisplayName(e.target.value)}
+                        disabled={profileSaving}
+                        maxLength={64}
+                      />
                     </div>
-                    <p style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--text-tertiary)',
-                      marginTop: '0.5rem',
-                    }}>
-                      {backgroundTint === 'none' ? 'No color tint applied' : `${COLOR_TINTS.find(t => t.value === backgroundTint)?.label} tint applied`}
-                    </p>
+                    <div className="form-field" style={{ marginBottom: '0.75rem' }}>
+                      <label htmlFor="nickname">Nickname</label>
+                      <input
+                        id="nickname"
+                        type="text"
+                        value={profileNickname}
+                        onChange={(e) => setProfileNickname(e.target.value)}
+                        disabled={profileSaving}
+                        maxLength={64}
+                      />
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
+                        Profile URL: <code>/u/{profileNickname || currentUser?.nickname || 'nickname'}</code>
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="form-field">
-                    <label htmlFor="asciiArt">ASCII Art</label>
+                    <div className="form-field" style={{ marginTop: '0.25rem' }}>
+                      <label htmlFor="profileBio">Bio</label>
                     <textarea
-                      id="asciiArt"
-                      value={asciiArt}
-                      onChange={(e) => {
-                        const lines = e.target.value.split('\n');
-                        if (lines.length <= 10) {
-                          setAsciiArt(e.target.value);
-                        }
-                      }}
+                      id="profileBio"
                       rows={4}
-                      style={{
-                        fontFamily: 'var(--font-body)',
-                        fontSize: '0.9rem',
-                        lineHeight: '1.2',
-                        resize: 'vertical',
-                        minHeight: '4em',
-                        maxHeight: '10em'
-                      }}
-                      placeholder="Enter ASCII art (max 10 lines)"
-                      disabled={loading}
+                      value={profileBio}
+                      onChange={(e) => setProfileBio(e.target.value.slice(0, 280))}
+                      placeholder="Share something about yourself (max 280 characters)"
+                      disabled={profileSaving}
                     />
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: '0.25rem', opacity: 0.7 }}>
-                      Displayed at the top • Tip: Ask AI for "simple ASCII art of [subject], 5 lines max"
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
+                      {profileBio.length} / 280 characters
                     </p>
                   </div>
 
-                </div>
+                  <ButtonRow>
+                    {currentUser && (
+                      <Link
+                        href={`/u/${currentUser.nickname}`}
+                        className="btn-outline"
+                      >
+                        View Public Profile
+                      </Link>
+                    )}
+                    <button type="submit" className="btn-soft" disabled={profileSaving}>
+                      {profileSaving ? 'Saving…' : 'Save Profile'}
+                    </button>
+                  </ButtonRow>
+                </form>
+              </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedTheme('cosmic_dust');
-                      setBackgroundTint('none');
-                      setAsciiArt(' /\\_/\\ \n( o.o )');
-                    }}
-                    className="btn-soft"
-                    disabled={loading}
-                  >
-                    Reset Appearance
-                  </button>
-                  <button type="submit" className="btn-soft" disabled={loading}>
-                    {loading ? 'Saving…' : 'Save'}
-                  </button>
-                </div>
-              </form>
+              <div className="card">
+                <form onSubmit={handleUpdateAppearance} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div>
+                    <h3 className="settings-section">Appearance</h3>
+                    <div className="form-field">
+                      <label htmlFor="theme">Theme</label>
+                      <select
+                        id="theme"
+                        value={selectedTheme}
+                        onChange={(e) => setSelectedTheme(e.target.value as BackgroundThemeKey)}
+                        disabled={appearanceSaving}
+                      >
+                        {Object.entries(BACKGROUND_THEMES).map(([key, preset]) => (
+                          <option key={key} value={key}>
+                            {preset.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-field">
+                      <label>Color tint</label>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                        {COLOR_TINTS.map((tint) => (
+                          <button
+                            key={tint.value}
+                            type="button"
+                            onClick={() => setBackgroundTint(tint.value)}
+                            style={{
+                              width: '3rem',
+                              height: '3rem',
+                              borderRadius: '0.75rem',
+                              border: backgroundTint === tint.value
+                                ? '2px solid rgba(158, 160, 255, 0.8)'
+                                : '1px solid rgba(158, 160, 255, 0.3)',
+                              background: tint.color,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              transform: backgroundTint === tint.value ? 'scale(1.1)' : 'scale(1)',
+                              position: 'relative',
+                            }}
+                            title={tint.label}
+                            disabled={appearanceSaving}
+                          >
+                            {tint.value === 'none' && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                fontSize: '0.65rem',
+                                color: 'rgba(255, 255, 255, 0.5)',
+                                fontWeight: 600,
+                              }}>
+                                OFF
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
+                        {backgroundTint === 'none'
+                          ? 'No color tint applied'
+                          : `${COLOR_TINTS.find(t => t.value === backgroundTint)?.label} tint applied`}
+                      </p>
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="asciiArt">ASCII Art Banner</label>
+                      <textarea
+                        id="asciiArt"
+                        value={asciiArt}
+                        onChange={(e) => {
+                          const lines = e.target.value.split('\n');
+                          if (lines.length <= 10) {
+                            setAsciiArt(e.target.value);
+                          }
+                        }}
+                        rows={4}
+                        placeholder="Add ASCII art (max 10 lines)"
+                        disabled={appearanceSaving}
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.9rem',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre',
+                        }}
+                      />
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.35rem' }}>
+                        {asciiArt.split('\n').length}/10 lines used
+                      </p>
+                    </div>
+                  </div>
+
+                  <ButtonRow>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedTheme(DEFAULT_BACKGROUND_THEME);
+                        setBackgroundTint(DEFAULT_BACKGROUND_TINT);
+                        setAsciiArt(DEFAULT_ASCII_ART_BANNER);
+                      }}
+                      className="btn-outline"
+                      disabled={appearanceSaving}
+                    >
+                      Reset Appearance
+                    </button>
+                    <button type="submit" className="btn-soft" disabled={appearanceSaving}>
+                      {appearanceSaving ? 'Saving…' : 'Save Appearance'}
+                    </button>
+                  </ButtonRow>
+                </form>
+              </div>
             </div>
           )}
 
           {activeTab === 'admin' && (
-            <div className="card admin-tab-content">
-              <form onSubmit={handleUpdateAnalytics} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-                <div>
-                  <h3 className="settings-section">Analytics</h3>
-                  <div className="form-field">
-                    <label htmlFor="trackingSnippet">Analytics Snippet</label>
-                    <textarea
-                      id="trackingSnippet"
-                      value={trackingSnippet}
-                      onChange={(e) => setTrackingSnippet(e.target.value)}
-                      placeholder="Paste optional analytics script (HTML/JS)"
-                      rows={4}
-                      style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-                      disabled={loading}
-                    />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.35rem' }}>
-                      Added to every page before the closing body tag. Use for Google Analytics, Plausible, etc.
-                    </p>
+            currentUser?.role === 'admin' ? (
+              <div className="admin-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 className="settings-section" style={{ marginBottom: 0 }}>Community snapshot</h3>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                      {statsLoading ? 'Refreshing…' : 'Live overview'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                    <div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.35rem' }}>Total members</p>
+                      <p style={{ fontSize: '2rem', margin: 0 }}>
+                        {statsLoading && !stats ? '—' : stats?.totalUsers ?? '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    <div style={{ flex: '1 1 220px' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.35rem' }}>Top voices (whispers)</p>
+                      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                        {(stats?.topActive ?? []).map((user) => (
+                          <li key={`active-${user.nickname}`}>
+                            <Link href={`/u/${user.nickname}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
+                              <span style={{ fontWeight: 500 }}>{user.displayName}</span>
+                              <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.4rem' }}>@{user.nickname}</span>
+                            </Link>
+                            <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.35rem', fontSize: '0.8rem' }}>
+                              {user.postCount ?? 0} whispers
+                            </span>
+                          </li>
+                        ))}
+                        {(!stats || (stats.topActive?.length ?? 0) === 0) && (
+                          <li style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+                            {statsLoading ? 'Loading…' : 'No activity yet'}
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+
+                    <div style={{ flex: '1 1 220px' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.35rem' }}>Newest arrivals</p>
+                      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                        {(stats?.recentUsers ?? []).map((user) => (
+                          <li key={`recent-${user.nickname}`}>
+                            <Link href={`/u/${user.nickname}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
+                              <span style={{ fontWeight: 500 }}>{user.displayName}</span>
+                              <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.4rem' }}>@{user.nickname}</span>
+                            </Link>
+                            <span style={{ color: 'var(--text-tertiary)', display: 'block', fontSize: '0.75rem' }}>
+                              {new Date(user.createdAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </span>
+                          </li>
+                        ))}
+                        {(!stats || (stats.recentUsers?.length ?? 0) === 0) && (
+                          <li style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+                            {statsLoading ? 'Loading…' : 'No signups yet'}
+                          </li>
+                        )}
+                      </ul>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button type="submit" className="btn-soft" disabled={loading}>
-                    {loading ? 'Saving…' : 'Save Settings'}
-                  </button>
+                <div className="card">
+                  <form onSubmit={handleUpdateAnalytics} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div>
+                      <h3 className="settings-section">Analytics</h3>
+                      <div className="form-field">
+                        <label htmlFor="trackingSnippet">Analytics snippet</label>
+                        <textarea
+                          id="trackingSnippet"
+                          value={trackingSnippet}
+                          onChange={(e) => setTrackingSnippet(e.target.value)}
+                          rows={6}
+                          placeholder="Paste your analytics or tracking script here"
+                          style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
+                          disabled={loading}
+                        />
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.35rem' }}>
+                          Script is injected before {'</body>'}. Ideal for Google Analytics, Plausible, and friends.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      <button type="submit" className="btn-soft" disabled={loading}>
+                        {loading ? 'Saving…' : 'Save Analytics'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
-            </div>
+              </div>
+            ) : (
+              <div className="card">
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Only administrators can access analytics settings.
+                </p>
+              </div>
+            )
           )}
         </div>
 
@@ -1242,7 +1469,7 @@ const navigationTabs: Array<{ id: 'drafts' | 'published' | 'new' | 'profile' | '
                 ) : (
                   // Categorized view
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    {Object.entries(ICON_CATEGORIES).map(([category, iconNames]) => (
+                  {Object.entries(ADMIN_ICON_CATEGORIES).map(([category, iconNames]) => (
                       <div key={category}>
                         <h4 style={{
                           color: 'var(--text-secondary)',
