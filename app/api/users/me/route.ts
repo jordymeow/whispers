@@ -114,7 +114,6 @@ export async function PUT(request: NextRequest) {
         username: user.username,
         email: user.email,
         displayName: user.displayName,
-        username: user.username,
         bio: user.bio ?? '',
         backgroundTheme: user.backgroundTheme ?? DEFAULT_BACKGROUND_THEME,
         backgroundTint: user.backgroundTint ?? DEFAULT_BACKGROUND_TINT,
