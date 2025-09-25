@@ -718,7 +718,7 @@ export default function AdminPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1 style={{ fontSize: '1.35rem', fontFamily: 'var(--font-title)', fontWeight: 400 }}>
               <Link
-                href={currentUser ? `/@${currentUser.username}` : '/'}
+                href={currentUser ? `/u/${currentUser.username}` : '/'}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -727,7 +727,7 @@ export default function AdminPage() {
                   textDecoration: 'none',
                 }}
               >
-                Whispers
+                {currentUser?.displayName || 'Dashboard'}
               </Link>
             </h1>
             <button

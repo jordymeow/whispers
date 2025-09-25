@@ -68,7 +68,7 @@ export default function SearchClient() {
   }, [searchQuery, performSearch]);
 
   return (
-    <BackgroundProvider backgroundTheme="cosmic_dust" backgroundTint="purple">
+    <BackgroundProvider backgroundTheme="northern_lights" backgroundTint="blue">
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <header style={{ padding: '5rem 0 3rem' }} className="animate-fade-up">
           <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>

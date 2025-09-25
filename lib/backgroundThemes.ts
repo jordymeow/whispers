@@ -79,7 +79,7 @@ export const BACKGROUND_THEMES = {
 } as const;
 
 export type BackgroundThemeKey = keyof typeof BACKGROUND_THEMES;
-export const DEFAULT_BACKGROUND_THEME: BackgroundThemeKey = 'cosmic_dust';
+export const DEFAULT_BACKGROUND_THEME: BackgroundThemeKey = 'northern_lights';
 
 export const BACKGROUND_TINTS = [
   'none',
@@ -95,7 +95,7 @@ export const BACKGROUND_TINTS = [
 ] as const;
 
 export type BackgroundTint = (typeof BACKGROUND_TINTS)[number];
-export const DEFAULT_BACKGROUND_TINT: BackgroundTint = 'none';
+export const DEFAULT_BACKGROUND_TINT: BackgroundTint = 'blue';
 
 // CSS animations that need to be added to global styles
 export const BACKGROUND_ANIMATIONS = `
