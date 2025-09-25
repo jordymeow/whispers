@@ -1,0 +1,160 @@
+.searchContainer {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: var(--foreground);
+  transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+.searchInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem 0;
+}
+
+.userCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.userCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.cardHeader {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), transparent);
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.userIcon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.userIcon svg {
+  opacity: 0.6;
+}
+
+.asciiArt {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  line-height: 1.1;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  margin: 0;
+  white-space: pre;
+}
+
+.cardContent {
+  padding: 1.5rem;
+  flex: 1;
+  text-align: center;
+}
+
+.displayName {
+  font-size: 1.25rem;
+  font-family: var(--font-title);
+  font-weight: 400;
+  margin: 0 0 0.25rem 0;
+}
+
+.username {
+  font-size: 0.9rem;
+  color: var(--text-tertiary);
+  margin: 0 0 1rem 0;
+}
+
+.userBio {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardFooter {
+  padding: 1rem 1.5rem;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: color 0.2s ease;
+}
+
+.userCard:hover .cardFooter {
+  color: var(--foreground);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .resultsGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .searchInput {
+    font-size: 1rem;
+  }
+
+  .cardHeader {
+    padding: 1.5rem;
+  }
+
+  .userIcon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .displayName {
+    font-size: 1.1rem;
+  }
+}

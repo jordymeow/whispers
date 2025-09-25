@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         { displayName: { $regex: q, $options: 'i' } }   // Display name contains query
       ]
     })
-      .select('username displayName bio backgroundTint')
+      .select('username displayName bio backgroundTint asciiArtBanner')
       .limit(limit)
       .lean();
 
@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
       displayName: user.displayName,
       bio: user.bio,
       backgroundTint: user.backgroundTint,
+      asciiArtBanner: user.asciiArtBanner,
       profileUrl: `/u/${user.username}`
     }));
 

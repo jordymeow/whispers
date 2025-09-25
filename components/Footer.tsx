@@ -6,9 +6,8 @@ export async function Footer() {
   const cookieStore = await cookies();
   const token = cookieStore.get('midnight-auth')?.value ?? '';
   const viewer = token ? verifyToken(token) : null;
+  const isAuthenticated = !!viewer;
   const isAdmin = viewer?.role === 'admin';
-
-  const siteTitle = 'Whispers';
 
   return (
     <footer style={{ padding: '2.25rem 0', borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
@@ -28,22 +27,25 @@ export async function Footer() {
             }}
           >
             <Link href="/" style={{ color: 'inherit' }}>
-              {siteTitle}
+              Home
             </Link>
-            <span style={{ opacity: 0.6 }}>·</span>
-            <a
-              href="https://github.com/jordymeow/midnight-whisper"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'inherit' }}
-            >
-              GitHub
-            </a>
             {isAdmin && (
               <>
                 <span style={{ opacity: 0.6 }}>·</span>
                 <Link href="/dashboard" style={{ color: 'inherit' }}>
                   Dashboard
+                </Link>
+              </>
+            )}
+            {isAuthenticated && (
+              <>
+                <span style={{ opacity: 0.6 }}>·</span>
+                <Link href={`/u/${viewer.username}`} style={{ color: 'inherit' }}>
+                  Profile
+                </Link>
+                <span style={{ opacity: 0.6 }}>·</span>
+                <Link href="/search" style={{ color: 'inherit' }}>
+                  Search
                 </Link>
               </>
             )}
