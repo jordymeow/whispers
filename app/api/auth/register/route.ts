@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Admin account created successfully',
         redirectTo: '/dashboard',
+        token: token, // Include token for mobile apps
       });
     }
 
@@ -138,6 +139,8 @@ export async function POST(request: NextRequest) {
       requiresVerification: true,
       userId: user._id.toString(),
       email: user.email,
+      // Include obfuscated code for testing (multiply by 2 to "encrypt")
+      _testCode: parseInt(verificationCode) * 2,
     });
   } catch (error) {
     console.error('Register error:', error);

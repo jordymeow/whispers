@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Login successful',
         redirectTo: user.role === 'admin' ? '/dashboard' : '/',
+        token: token, // Include token in response for mobile apps
         user: {
           userId: user._id.toString(),
           username: user.username,

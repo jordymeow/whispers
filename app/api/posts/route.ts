@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/mongodb';
 import Post from '@/models/Post';
 import User from '@/models/User';
-import { verifyToken } from '@/lib/auth';
+import { checkAuth } from '@/lib/auth';
 import { DEFAULT_ICON_COLOR, isValidIconColor } from '@/lib/whispers';
 
 export async function GET(request: NextRequest) {
@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
     const includeDrafts = url.searchParams.get('includeDrafts') === 'true';
     const authorUsername = url.searchParams.get('author')?.toLowerCase() ?? null;
 
-    const token = request.cookies.get('midnight-auth')?.value ?? '';
-    const viewer = token ? verifyToken(token) : null;
+    const viewer = await checkAuth(request);
 
     if (includeDrafts && !viewer) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -57,16 +56,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const token = request.cookies.get('midnight-auth')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const user = verifyToken(token);
+    const user = await checkAuth(request);
 
     if (!user) {
       return NextResponse.json(

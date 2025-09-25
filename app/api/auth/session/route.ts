@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { checkAuth } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('midnight-auth')?.value;
-
-    if (!token) {
-      return NextResponse.json({ authenticated: false });
-    }
-
-    const user = verifyToken(token);
+    const user = await checkAuth(request);
 
     if (!user) {
       return NextResponse.json({ authenticated: false });

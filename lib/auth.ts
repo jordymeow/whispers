@@ -41,6 +41,13 @@ export function removeAuthCookie(res: NextResponse) {
 }
 
 export function getTokenFromRequest(req: NextRequest): string | null {
+  // First check for Bearer token in Authorization header (for mobile apps)
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+
+  // Fall back to cookie authentication (for web)
   return req.cookies.get(COOKIE_NAME)?.value ?? null;
 }
 
