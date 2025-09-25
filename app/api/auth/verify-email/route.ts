@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
-import { checkAuth, generateToken, setAuthCookie } from '@/lib/auth';
+import { generateToken, setAuthCookie } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await checkAuth(request);
-    if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    await connectToDatabase();
 
     const { email, code } = await request.json();
 
@@ -22,118 +16,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      emailVerified: false
+    });
 
-    // First get the user with Mongoose for most fields
-    const user = await User.findById(auth.userId);
     if (!user) {
       return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Get the pending fields directly from MongoDB since Mongoose might not have them in schema
-    const mongoose = await import('mongoose');
-    const userDoc = await mongoose.connection.db
-      .collection('users')
-      .findOne({ _id: user._id });
-
-    const pendingEmail = userDoc?.pendingEmail;
-    const pendingEmailCode = userDoc?.pendingEmailCode;
-    const pendingEmailExpires = userDoc?.pendingEmailExpires;
-
-    // Check if there's a pending email change
-    if (!pendingEmail) {
-      return NextResponse.json(
-        { error: 'No pending email change found' },
+        { error: 'Invalid email or already verified' },
         { status: 400 }
       );
     }
 
-    // Check if the pending email matches
-    if (pendingEmail.toLowerCase() !== email.toLowerCase()) {
-      return NextResponse.json(
-        { error: 'Email mismatch' },
-        { status: 400 }
-      );
-    }
-
-    // Check if code has expired
-    if (!pendingEmailExpires || new Date(pendingEmailExpires) < new Date()) {
-      // Clear expired data using updateOne
-      await User.updateOne(
-        { _id: auth.userId },
-        {
-          $unset: {
-            pendingEmail: '',
-            pendingEmailCode: '',
-            pendingEmailExpires: ''
-          }
-        }
-      );
-
-      return NextResponse.json(
-        { error: 'Verification code has expired' },
-        { status: 400 }
-      );
-    }
-
-    // Check if code matches
-    if (pendingEmailCode !== code.toUpperCase()) {
+    // Check if code matches and hasn't expired
+    if (user.pendingEmailCode !== code) {
       return NextResponse.json(
         { error: 'Invalid verification code' },
         { status: 400 }
       );
     }
 
-    // Update email and clear pending fields
-    const oldEmail = user.email;
+    if (user.pendingEmailExpires && user.pendingEmailExpires < new Date()) {
+      return NextResponse.json(
+        { error: 'Verification code has expired. Please request a new one.' },
+        { status: 400 }
+      );
+    }
 
-    await User.updateOne(
-      { _id: auth.userId },
-      {
-        $set: {
-          email: pendingEmail,
-          emailVerified: true
-        },
-        $unset: {
-          pendingEmail: '',
-          pendingEmailCode: '',
-          pendingEmailExpires: ''
-        }
-      }
-    );
+    // Mark email as verified and clear verification fields
+    user.emailVerified = true;
+    user.pendingEmailCode = undefined;
+    user.pendingEmailExpires = undefined;
+    await user.save();
 
-    // Refetch user to get updated data
-    const updatedUser = await User.findById(auth.userId);
-
-    // Generate new token with updated email
+    // Generate token and set auth cookie
     const token = generateToken({
-      userId: updatedUser!._id.toString(),
-      username: updatedUser!.username,
-      email: updatedUser!.email,
-      displayName: updatedUser!.displayName,
-      nickname: updatedUser!.nickname,
-      role: updatedUser!.role,
+      userId: user._id.toString(),
+      username: user.username,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
     });
 
     const response = NextResponse.json({
       success: true,
-      message: 'Email updated successfully',
-      newEmail: pendingEmail,
-      oldEmail
+      message: 'Email verified successfully',
     });
 
-    // Set new auth cookie with updated info
     setAuthCookie(response, token);
 
     return response;
-
   } catch (error) {
     console.error('Email verification error:', error);
     return NextResponse.json(
-      { error: 'Failed to verify email' },
+      { error: 'Failed to verify email. Please try again.' },
       { status: 500 }
     );
   }

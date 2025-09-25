@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Midnight Whisper runs on Next.js App Router. Page code resides in `app/` with route groups such as `app/midnight-whisper`, `app/admin`, `app/login`, and `app/setup`. API handlers live under `app/api/...` and reuse Mongoose models from `models/`. Place shared utilities in `lib/` and presentational pieces in `components/` (for example `components/whispers/WhisperCard.tsx`). Persist global styles and Tailwind layers in `app/globals.css`. Store static assets and fonts inside `public/`. Keep cross-route guards within `middleware.ts`. Create manual or automated tests under `__tests__/` when adding coverage.
+Midnight Whisper runs on Next.js App Router. Page code resides in `app/` with route groups such as `app/midnight-whisper`, `app/admin`, `app/login`, and `app/register`. API handlers live under `app/api/...` and reuse Mongoose models from `models/`. Place shared utilities in `lib/` and presentational pieces in `components/` (for example `components/whispers/WhisperCard.tsx`). Persist global styles and Tailwind layers in `app/globals.css`. Store static assets and fonts inside `public/`. Keep cross-route guards within `middleware.ts`. Create manual or automated tests under `__tests__/` when adding coverage.
 
 ## Build, Test, and Development Commands
 Run `pnpm install` after pulling new branches to refresh dependencies. Use `pnpm dev` to launch Turbopack at http://localhost:3000; restart it after changing `.env.local`. Execute `pnpm build` to produce production bundles and `pnpm start` to serve them. Add targeted scripts under `package.json` rather than ad-hoc commands.

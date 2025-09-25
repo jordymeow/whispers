@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Whispers',
+  title: 'About | Whispers',
   description:
     'Whispers is a quiet format for personal late-night reflections—just one author, one voice, and a constellation of linked minds.',
 };

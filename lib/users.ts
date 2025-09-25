@@ -1,21 +1,20 @@
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 
-export function slugifyNickname(input: string): string {
+export function slugifyUsername(input: string): string {
   return input
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-');
 }
 
-export async function generateUniqueNickname(base: string): Promise<string> {
-  const initial = slugifyNickname(base) || 'whisperer';
+export async function generateUniqueUsername(base: string): Promise<string> {
+  const initial = slugifyUsername(base) || 'user';
   let candidate = initial;
   let counter = 1;
 
-  while (await User.exists({ nickname: candidate })) {
+  while (await User.exists({ username: candidate })) {
     counter += 1;
     candidate = `${initial}-${counter}`;
   }
@@ -28,10 +27,10 @@ export function sanitizeDisplayName(name: string): string {
   return trimmed.length > 0 ? trimmed : 'Unnamed Dreamer';
 }
 
-export async function getUser(nickname: string) {
+export async function getUser(username: string) {
   try {
     await connectToDatabase();
-    const user = await User.findOne({ nickname }).select('-password');
+    const user = await User.findOne({ username }).select('-password');
     return user;
   } catch (error) {
     console.error('Error fetching user:', error);

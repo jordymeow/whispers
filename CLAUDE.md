@@ -47,11 +47,12 @@ pnpm start
 - `/midnight-whisper` - Main whisper/post interface
 - `/admin` - Protected admin panel (requires authentication)
 - `/login` - Authentication page
-- `/setup` - Initial setup page
+- `/register` - User registration (first user becomes admin)
+- `/verify-email` - Email verification for new users
 
 #### API Routes Structure
 All API routes are in `app/api/`:
-- `auth/` - Authentication endpoints (login, logout, check, session, setup)
+- `auth/` - Authentication endpoints (login, logout, check, session, register, verify-email)
 - `posts/` - CRUD operations for posts/whispers
 - `settings/` - Application settings management
 

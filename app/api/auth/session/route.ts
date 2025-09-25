@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
         username: dbUser.username,
         email: dbUser.email,
         displayName: dbUser.displayName,
-        nickname: dbUser.nickname,
         role: dbUser.role,
       },
     });

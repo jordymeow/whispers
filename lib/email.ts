@@ -12,7 +12,7 @@ const mg = process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN
   : null;
 
 const FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'noreply@whispers.cloud';
-const FROM_NAME = process.env.MAILGUN_FROM_NAME || 'Midnight Whisper';
+const FROM_NAME = process.env.MAILGUN_FROM_NAME || 'Whispers';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 interface EmailOptions {
@@ -48,12 +48,12 @@ export async function sendEmail({ to, subject, text, html }: EmailOptions): Prom
 export async function sendPasswordResetEmail(email: string, resetToken: string): Promise<boolean> {
   const resetUrl = `${SITE_URL}/reset-password/${resetToken}`;
 
-  const subject = 'Reset Your Midnight Whisper Password';
+  const subject = 'Reset Your Whispers Password';
 
   const text = `
 Hello,
 
-You requested a password reset for your Midnight Whisper account.
+You requested a password reset for your Whispers account.
 
 Click the link below to reset your password:
 ${resetUrl}
@@ -63,7 +63,7 @@ This link will expire in 1 hour.
 If you didn't request this, please ignore this email.
 
 Best,
-The Midnight Whisper Team
+The Whispers Team
   `.trim();
 
   const html = `
@@ -85,12 +85,12 @@ The Midnight Whisper Team
   <div class="container">
     <div class="header">
       <div class="logo">🌙</div>
-      <h1 style="margin: 0; color: #e0e0f0;">Midnight Whisper</h1>
+      <h1 style="margin: 0;">Whispers</h1>
     </div>
     <div class="content">
       <h2 style="color: #e0e0f0;">Password Reset Request</h2>
       <p>Hello,</p>
-      <p>You requested a password reset for your Midnight Whisper account.</p>
+      <p>You requested a password reset for your Whispers account.</p>
       <p>Click the button below to reset your password:</p>
       <div style="text-align: center;">
         <a href="${resetUrl}" class="button">Reset Password</a>
@@ -103,7 +103,7 @@ The Midnight Whisper Team
       <p style="color: #9090a0;">If you didn't request this password reset, you can safely ignore this email.</p>
     </div>
     <div class="footer">
-      <p>© Midnight Whisper · <a href="${SITE_URL}">whispers.cloud</a></p>
+      <p>© Whispers · <a href="${SITE_URL}">whispers.cloud</a></p>
       <p style="font-size: 12px;">A quiet corner of the internet</p>
     </div>
   </div>
@@ -115,7 +115,7 @@ The Midnight Whisper Team
 }
 
 export async function sendEmailVerificationCode(email: string, code: string): Promise<boolean> {
-  const subject = 'Verify Your Email - Midnight Whisper';
+  const subject = 'Verify Your Email - Whispers';
 
   const text = `
 Your verification code is: ${code}
@@ -125,7 +125,7 @@ This code will expire in 15 minutes.
 If you didn't request this email change, please ignore this message.
 
 Best,
-The Midnight Whisper Team
+The Whispers Team
   `.trim();
 
   const html = `
@@ -148,7 +148,7 @@ The Midnight Whisper Team
   <div class="container">
     <div class="header">
       <div class="logo">🌙</div>
-      <h1 style="margin: 0; color: #e0e0f0;">Midnight Whisper</h1>
+      <h1 style="margin: 0;">Whispers</h1>
     </div>
     <div class="content">
       <h2 style="color: #e0e0f0;">Email Verification Code</h2>
@@ -167,7 +167,7 @@ The Midnight Whisper Team
       </p>
     </div>
     <div class="footer">
-      <p>© Midnight Whisper · <a href="${SITE_URL}">whispers.cloud</a></p>
+      <p>© Whispers · <a href="${SITE_URL}">whispers.cloud</a></p>
       <p style="font-size: 12px;">A quiet corner of the internet</p>
     </div>
   </div>
@@ -179,17 +179,17 @@ The Midnight Whisper Team
 }
 
 export async function sendWelcomeEmail(email: string, name: string): Promise<boolean> {
-  const subject = 'Welcome to Midnight Whisper 🌙';
+  const subject = 'Welcome to Whispers 🌙';
 
   const text = `
 Hello ${name},
 
-Welcome to Midnight Whisper! Your account has been created successfully.
+Welcome to Whispers! Your account has been created successfully.
 
 Start sharing your whispers at ${SITE_URL}
 
 Best,
-The Midnight Whisper Team
+The Whispers Team
   `.trim();
 
   const html = `
@@ -211,12 +211,12 @@ The Midnight Whisper Team
   <div class="container">
     <div class="header">
       <div class="logo">🌙</div>
-      <h1 style="margin: 0; color: #e0e0f0;">Welcome to Midnight Whisper</h1>
+      <h1 style="margin: 0;">Welcome to Whispers</h1>
     </div>
     <div class="content">
       <h2 style="color: #e0e0f0;">Hello ${name}!</h2>
       <p>Your account has been created successfully. Welcome to our quiet corner of the internet.</p>
-      <p>Midnight Whisper is a place for thoughtful expression, where every whisper matters more than the noise.</p>
+      <p>Whispers is a place for thoughtful expression, where every whisper matters more than the noise.</p>
       <div style="text-align: center;">
         <a href="${SITE_URL}" class="button">Start Whispering</a>
       </div>
@@ -226,12 +226,12 @@ The Midnight Whisper Team
           <li>Customize your profile with themes and colors</li>
           <li>Each whisper is limited to 1000 characters - make them count</li>
           <li>Add icons and colors to match your mood</li>
-          <li>Your profile lives at <a href="${SITE_URL}/@">whispers.cloud/@your-nickname</a></li>
+          <li>Your profile lives at <a href="${SITE_URL}/@">whispers.cloud/@your-username</a></li>
         </ul>
       </div>
     </div>
     <div class="footer">
-      <p>© Midnight Whisper · <a href="${SITE_URL}">whispers.cloud</a></p>
+      <p>© Whispers · <a href="${SITE_URL}">whispers.cloud</a></p>
       <p style="font-size: 12px;">A quiet corner of the internet</p>
     </div>
   </div>

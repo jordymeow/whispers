@@ -9,7 +9,7 @@ interface ProfileFeedProps {
   posts: WhisperCardData[];
   ownerName: string;
   siteName: string;
-  ownerNickname: string;
+  ownerUsername: string;
   canCompose?: boolean;
 }
 
@@ -32,7 +32,7 @@ function formatDate(input: string | Date): string {
   });
 }
 
-export function ProfileFeed({ posts, ownerName, siteName, ownerNickname, canCompose = false }: ProfileFeedProps) {
+export function ProfileFeed({ posts, ownerName, siteName, ownerUsername, canCompose = false }: ProfileFeedProps) {
   const initialPosts = useMemo(
     () =>
       posts.map((post, index) => ({
@@ -180,9 +180,44 @@ export function ProfileFeed({ posts, ownerName, siteName, ownerNickname, canComp
     <>
       <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         {postList.length === 0 ? (
-          <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>
-            No whispers shared yet.
-          </p>
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem 1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem',
+            alignItems: 'center'
+          }}>
+            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+              No whispers shared yet.
+            </p>
+            {canCompose && (
+              <>
+                <p style={{
+                  color: 'var(--text-tertiary)',
+                  fontSize: '0.95rem',
+                  maxWidth: '28rem',
+                  lineHeight: 1.6,
+                  margin: 0
+                }}>
+                  Click the + button to whisper something new.
+                  <br />
+                  Visit your{' '}
+                  <a
+                    href="/dashboard"
+                    style={{
+                      color: 'var(--accent-bright)',
+                      textDecoration: 'none',
+                      borderBottom: '1px solid rgba(158, 160, 255, 0.3)'
+                    }}
+                  >
+                    dashboard
+                  </a>
+                  {' '}to personalize your page and manage your whispers.
+                </p>
+              </>
+            )}
+          </div>
         ) : (
           postList.map((post) => (
             <WhisperCard
@@ -313,7 +348,7 @@ export function ProfileFeed({ posts, ownerName, siteName, ownerNickname, canComp
           onClose={() => setShowCompose(false)}
           onSuccess={async () => {
             try {
-              const res = await fetch(`/api/posts?author=${encodeURIComponent(ownerNickname)}`, {
+              const res = await fetch(`/api/posts?author=${encodeURIComponent(ownerUsername)}`, {
                 cache: 'no-store',
                 credentials: 'include',
               });

@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = (await User.findOne({ username })) as IUser | null;
+    // Ensure username is lowercase for case-insensitive login
+    const user = (await User.findOne({ username: username.toLowerCase() })) as IUser | null;
 
     if (!user) {
       return NextResponse.json(
@@ -39,7 +40,6 @@ export async function POST(request: NextRequest) {
       username: user.username,
       email: user.email,
       displayName: user.displayName,
-      nickname: user.nickname,
       role: user.role,
     });
 
@@ -47,13 +47,12 @@ export async function POST(request: NextRequest) {
       NextResponse.json({
         success: true,
         message: 'Login successful',
-        redirectTo: user.role === 'admin' ? '/admin' : '/',
+        redirectTo: user.role === 'admin' ? '/dashboard' : '/',
         user: {
           userId: user._id.toString(),
           username: user.username,
           email: user.email,
           displayName: user.displayName,
-          nickname: user.nickname,
           role: user.role,
         },
       }),

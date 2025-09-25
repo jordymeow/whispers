@@ -58,7 +58,7 @@ export async function PUT(
     if (isDraft !== undefined) existingPost.isDraft = isDraft;
 
     await existingPost.save();
-    const populated = await existingPost.populate('userId', 'displayName nickname');
+    const populated = await existingPost.populate('userId', 'displayName username');
 
     return NextResponse.json(normalizePost(populated.toObject()));
   } catch (error) {
@@ -83,7 +83,7 @@ function normalizePost(post: any) {
   const author = authorDoc
     ? {
         displayName: authorDoc.displayName,
-        nickname: authorDoc.nickname,
+        username: authorDoc.username,
       }
     : null;
 

@@ -15,7 +15,7 @@ interface Post {
   color?: IconColorName;
   author?: {
     displayName: string;
-    nickname: string;
+    username: string;
   } | null;
 }
 
@@ -257,25 +257,33 @@ export default function Home() {
       {/* Landing Hero */}
       <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6rem 0' }}>
         <div className="container animate-fade-up" style={{ display: 'flex', flexDirection: 'column', gap: '3rem', alignItems: 'center', textAlign: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '42rem' }}>
-            <p style={{
-              fontFamily: 'var(--font-body)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.22em',
-              color: 'var(--text-tertiary)',
-              fontSize: '0.75rem',
-              marginBottom: 0,
-            }}>
-              A Cloud Of
-            </p>
-            <h1 style={{
-              fontSize: '3.5rem',
-              letterSpacing: '0.04em',
-              fontFamily: 'var(--font-title)',
-              fontWeight: 400,
-            }}>
-              Whispers
-            </h1>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '42rem', alignItems: 'center' }}>
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: '20px' }}>
+              <p style={{
+                fontFamily: 'var(--font-body)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.22em',
+                color: 'var(--text-tertiary)',
+                fontSize: '0.75rem',
+                margin: 0,
+                position: 'absolute',
+                right: 0,
+                top: '-5px',
+                whiteSpace: 'nowrap',
+              }}>
+                A Cloud Of
+              </p>
+              <h1 style={{
+                fontSize: '3.5rem',
+                letterSpacing: '0.04em',
+                fontFamily: 'var(--font-title)',
+                fontWeight: 400,
+                margin: 0,
+                display: 'inline-block',
+              }}>
+                Whispers
+              </h1>
+            </div>
             <p style={{
               fontSize: '1.1rem',
               color: 'var(--text-secondary)',
@@ -283,13 +291,13 @@ export default function Home() {
               maxWidth: '36rem',
               margin: '0 auto',
             }}>
-              Trade secret thoughts, soft confessions, and midnight letters in a shared, tranquil space.
-              Whisper something into the dark and hear new voices in return.
+              Share your thoughts, ideas, and moments of clarity.
+              No likes, no algorithms, no endless scrolling—just real voices in a calm space.
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link href={isAuthenticated ? '/admin' : '/register'} className="btn btn-primary" style={{ minWidth: '10rem' }}>
+            <Link href={isAuthenticated ? '/dashboard' : '/register'} className="btn btn-primary" style={{ minWidth: '10rem' }}>
               {isAuthenticated ? 'Write a Whisper' : 'Create Account'}
             </Link>
             {!isAuthenticated && (
@@ -302,11 +310,11 @@ export default function Home() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '32rem' }}>
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
               <span style={{ textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-                Whisper · Listen · Wander
+                Write · Discover · Connect
               </span>
             </div>
             <p style={{ fontSize: '0.95rem', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>
-              This place is built for quiet storytelling. Each whisper rests in the cloud—no endless feed, just your voice and the voices you invite.
+              Not another feed to scroll. Just a calm place where thoughts can rest and be found by those who wander by.
             </p>
           </div>
         </div>

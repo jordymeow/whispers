@@ -9,31 +9,17 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const verifySetup = async () => {
-      try {
-        const res = await fetch('/api/auth/check');
-        if (res.ok) {
-          const data = await res.json();
-          if (!data.hasUsers) {
-            router.replace('/setup');
-            return;
-          }
-        }
-      } catch (err) {
-        console.error('Register check failed:', err);
-      } finally {
-        setChecking(false);
-      }
-    };
-    verifySetup();
-  }, [router]);
+    document.title = 'Register | Whispers';
+  }, []);
 
   const validateForm = () => {
     if (!name.trim()) {
@@ -99,9 +85,11 @@ export default function RegisterPage() {
         return;
       }
 
-      if (data.redirectTo) {
-        router.replace(data.redirectTo);
-        router.refresh();
+      if (data.requiresVerification) {
+        router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+      } else if (data.redirectTo) {
+        // First user (admin) - direct login
+        router.push(data.redirectTo);
       }
     } catch (err) {
       console.error('Registration error:', err);
@@ -109,14 +97,6 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
-
-  if (checking) {
-    return (
-      <div className="page-center">
-        <div className="loading-spinner"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="page-center">
@@ -161,12 +141,29 @@ export default function RegisterPage() {
                 id="username"
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.toLowerCase();
+                  // Only allow lowercase letters, numbers, and hyphens
+                  const cleaned = value.replace(/[^a-z0-9-]/g, '');
+                  setUsername(cleaned);
+
+                  // Validate username
+                  if (cleaned && cleaned.length < 3) {
+                    setUsernameError('Username must be at least 3 characters');
+                  } else if (cleaned && !/^[a-z][a-z0-9-]*$/.test(cleaned)) {
+                    setUsernameError('Username must start with a letter');
+                  } else {
+                    setUsernameError('');
+                  }
+                }}
                 placeholder="Choose a unique username"
                 autoComplete="username"
                 disabled={loading}
               />
             </div>
+            {usernameError && (
+              <p className="text-sm text-red-500 mt-1">{usernameError}</p>
+            )}
 
             <div className="form-field">
               <label htmlFor="password">Password</label>
@@ -174,7 +171,15 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  // Check if passwords match when password changes
+                  if (confirmPassword && e.target.value !== confirmPassword) {
+                    setPasswordError('Passwords do not match');
+                  } else {
+                    setPasswordError('');
+                  }
+                }}
                 placeholder="At least 6 characters"
                 autoComplete="new-password"
                 disabled={loading}
@@ -187,12 +192,23 @@ export default function RegisterPage() {
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  // Check if passwords match
+                  if (password && e.target.value !== password) {
+                    setPasswordError('Passwords do not match');
+                  } else {
+                    setPasswordError('');
+                  }
+                }}
                 placeholder="Repeat your password"
                 autoComplete="new-password"
                 disabled={loading}
               />
             </div>
+            {passwordError && (
+              <p className="text-sm text-red-500 mt-1">{passwordError}</p>
+            )}
 
             {error && (
               <div className="message message-error">
@@ -204,7 +220,7 @@ export default function RegisterPage() {
               type="submit"
               className="btn btn-primary"
               style={{ width: '100%', marginTop: '1rem' }}
-              disabled={loading || !username || !password || !confirmPassword || !name || !email}
+              disabled={loading || !username || !password || !confirmPassword || !name || !email || !!usernameError || !!passwordError}
             >
               {loading ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>

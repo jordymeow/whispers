@@ -11,7 +11,6 @@ export interface IUser extends Document {
   password: string;
   email: string;
   displayName: string;
-  nickname: string;
   bio?: string;
   backgroundTheme?: BackgroundThemeKey;
   backgroundTint?: BackgroundTint;
@@ -52,14 +51,6 @@ const UserSchema = new Schema<IUser>({
     type: String,
     required: true,
     trim: true,
-  },
-  nickname: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^[a-z0-9-]+$/, 'Nickname can only contain lowercase letters, numbers, and hyphens'],
   },
   bio: {
     type: String,

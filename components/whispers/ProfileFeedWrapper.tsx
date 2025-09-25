@@ -4,15 +4,15 @@ import { ProfileFeed } from './ProfileFeed';
 import { connectToDatabase } from '@/lib/mongodb';
 
 interface ProfileFeedWrapperProps {
-  nickname: string;
+  username: string;
   displayName: string;
 }
 
-export default async function ProfileFeedWrapper({ nickname, displayName }: ProfileFeedWrapperProps) {
+export default async function ProfileFeedWrapper({ username, displayName }: ProfileFeedWrapperProps) {
   await connectToDatabase();
 
   // First get the user to get their userId
-  const user = await User.findOne({ nickname }).select('_id');
+  const user = await User.findOne({ username }).select('_id');
   if (!user) {
     return null;
   }
@@ -35,7 +35,7 @@ export default async function ProfileFeedWrapper({ nickname, displayName }: Prof
       posts={formattedPosts}
       ownerName={displayName}
       siteName="Whispers"
-      ownerNickname={nickname}
+      ownerUsername={username}
       canCompose={false}
     />
   );

@@ -21,6 +21,10 @@ export default function ResetPasswordPage({ params }: ResetPasswordPageProps) {
   const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
+    document.title = 'Reset Password | Whispers';
+  }, []);
+
+  useEffect(() => {
     const validateToken = async () => {
       const resolvedParams = await params;
       const tokenValue = resolvedParams.token;

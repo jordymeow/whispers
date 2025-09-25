@@ -10,19 +10,41 @@ import Post from '@/models/Post';
 import { DEFAULT_ASCII_ART_BANNER } from '@/lib/siteDefaults';
 import { DEFAULT_BACKGROUND_THEME, DEFAULT_BACKGROUND_TINT } from '@/lib/backgroundThemes';
 import { verifyToken } from '@/lib/auth';
+import type { Metadata } from 'next';
 
 export const revalidate = 0;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  await connectToDatabase();
+  const userDoc = await User.findOne({ username: username.toLowerCase() }).lean();
+
+  if (!userDoc) {
+    return {
+      title: 'Profile Not Found | Whispers',
+    };
+  }
+
+  return {
+    title: `${userDoc.displayName} | Whispers`,
+    description: `Whispers from ${userDoc.displayName}`,
+  };
+}
 
 export default async function ProfilePage({
   params,
 }: {
-  params: Promise<{ nickname: string }>;
+  params: Promise<{ username: string }>;
 }) {
-  const { nickname: rawNickname } = await params;
-  const nickname = rawNickname.toLowerCase();
+  const { username: rawUsername } = await params;
+  const username = rawUsername.toLowerCase();
   await connectToDatabase();
 
-  const userDoc = await User.findOne({ nickname }).lean();
+  const userDoc = await User.findOne({ username }).lean();
   if (!userDoc) {
     notFound();
   }
@@ -30,7 +52,7 @@ export default async function ProfilePage({
   const cookieStore = await cookies();
   const token = cookieStore.get('midnight-auth')?.value ?? '';
   const viewer = token ? verifyToken(token) : null;
-  const canCompose = viewer?.nickname === userDoc.nickname;
+  const canCompose = viewer?.username === userDoc.username;
 
   const postsDocs = await Post.find({
     userId: userDoc._id,
@@ -116,7 +138,7 @@ export default async function ProfilePage({
           <ProfileFeed
             posts={posts}
             ownerName={userDoc.displayName}
-            ownerNickname={userDoc.nickname}
+            ownerUsername={userDoc.username}
             siteName="Whispers"
             canCompose={canCompose}
           />

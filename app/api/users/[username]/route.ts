@@ -6,13 +6,13 @@ import { DEFAULT_ASCII_ART_BANNER } from '@/lib/siteDefaults';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ nickname: string }> }
+  { params }: { params: Promise<{ username: string }> }
 ) {
   try {
-    const { nickname } = await params;
+    const { username } = await params;
 
     await connectToDatabase();
-    const user = await User.findOne({ nickname: nickname.toLowerCase() }).lean();
+    const user = await User.findOne({ username: username.toLowerCase() }).lean();
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -23,7 +23,6 @@ export async function GET(
         userId: user._id.toString(),
         username: user.username,
         displayName: user.displayName,
-        nickname: user.nickname,
         bio: user.bio ?? '',
         backgroundTheme: user.backgroundTheme ?? DEFAULT_BACKGROUND_THEME,
         backgroundTint: user.backgroundTint ?? DEFAULT_BACKGROUND_TINT,

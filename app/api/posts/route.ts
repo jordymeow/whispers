@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const includeDrafts = url.searchParams.get('includeDrafts') === 'true';
-    const authorNickname = url.searchParams.get('author')?.toLowerCase() ?? null;
+    const authorUsername = url.searchParams.get('author')?.toLowerCase() ?? null;
 
     const token = request.cookies.get('midnight-auth')?.value ?? '';
     const viewer = token ? verifyToken(token) : null;
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
       ? {}
       : { $or: [{ isDraft: false }, { isDraft: { $exists: false } }] };
 
-    if (authorNickname) {
-      const authorUser = await User.findOne({ nickname: authorNickname }).select('_id').lean();
+    if (authorUsername) {
+      const authorUser = await User.findOne({ username: authorUsername }).select('_id').lean();
       if (!authorUser) {
         return NextResponse.json([]);
       }
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     const posts = await Post.find(baseQuery)
       .sort({ date: -1 })
-      .populate('userId', 'displayName nickname')
+      .populate('userId', 'displayName username')
       .lean();
 
     const normalized = posts.map(normalizePost);
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     await post.save();
 
-    const populated = await post.populate('userId', 'displayName nickname');
+    const populated = await post.populate('userId', 'displayName username');
     return NextResponse.json(normalizePost(populated.toObject()));
   } catch (error) {
     console.error('Create post error:', error);
@@ -128,7 +128,7 @@ function normalizePost(post: any) {
   const author = authorDoc
     ? {
         displayName: authorDoc.displayName,
-        nickname: authorDoc.nickname,
+        username: authorDoc.username,
       }
     : null;
 

@@ -39,7 +39,7 @@ const RainEffect = lazy(() => import('@/components/RainEffect').then(m => ({ def
 
 interface PostAuthor {
   displayName: string;
-  nickname: string;
+  username: string;
 }
 
 interface Post {
@@ -57,7 +57,7 @@ interface CurrentUser {
   username: string;
   email: string;
   displayName: string;
-  nickname: string;
+  username: string;
   bio: string;
   role: 'admin' | 'user';
   backgroundTheme: BackgroundThemeKey;
@@ -66,7 +66,7 @@ interface CurrentUser {
 }
 
 interface AdminStatsUserSummary {
-  nickname: string;
+  username: string;
   displayName: string;
   email?: string;
   emailVerified?: boolean;
@@ -108,7 +108,7 @@ function normalizeCurrentUser(user: any): CurrentUser {
     username: user.username,
     email: user.email,
     displayName: user.displayName,
-    nickname: user.nickname,
+    username: user.username,
     bio: user.bio ?? '',
     role: user.role,
     backgroundTheme: theme,
@@ -153,12 +153,16 @@ export default function AdminPage() {
   const [iconSearch, setIconSearch] = useState('');
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState('');
-  const [profileNickname, setProfileNickname] = useState('');
+  const [profileUsername, setProfileUsername] = useState('');
   const [profileBio, setProfileBio] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState(false);
   const [appearanceSaving, setAppearanceSaving] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const selectedPreset = useMemo(() => getIconColorStyles(selectedColor), [selectedColor]);
 
@@ -250,7 +254,7 @@ export default function AdminPage() {
     author: post.author
       ? {
           displayName: post.author.displayName ?? 'Unknown Whisperer',
-          nickname: post.author.nickname ?? '',
+          username: post.author.username ?? '',
         }
       : null,
   });
@@ -258,7 +262,7 @@ export default function AdminPage() {
   const canModifyPost = (post: Post) => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin') return true;
-    return post.author?.nickname === currentUser.nickname;
+    return post.author?.username === currentUser.username;
   };
 
   const resetComposer = () => {
@@ -272,6 +276,7 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
+    document.title = 'Dashboard | Whispers';
     const initialise = async () => {
       resetComposer();
       const authed = await checkAuth();
@@ -350,7 +355,7 @@ export default function AdminPage() {
         const profile = normalizeCurrentUser(data.user);
         setCurrentUser(profile);
         setProfileDisplayName(profile.displayName);
-        setProfileNickname(profile.nickname);
+        setProfileUsername(profile.username);
         setProfileBio(profile.bio ?? '');
         setSelectedTheme(profile.backgroundTheme);
         setBackgroundTint(profile.backgroundTint);
@@ -387,6 +392,7 @@ export default function AdminPage() {
     event.preventDefault();
     if (!currentUser) return;
     setError('');
+    setUsernameError(false);
     setProfileSaving(true);
 
     try {
@@ -396,7 +402,7 @@ export default function AdminPage() {
         credentials: 'include',
         body: JSON.stringify({
           displayName: profileDisplayName,
-          nickname: profileNickname,
+          username: profileUsername,
           bio: profileBio,
         }),
       });
@@ -404,6 +410,10 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'Failed to update profile');
+        // Check if the error is about username
+        if (data.error === 'Username already in use') {
+          setUsernameError(true);
+        }
         return;
       }
 
@@ -411,7 +421,7 @@ export default function AdminPage() {
         const updated = normalizeCurrentUser(data.user);
         setCurrentUser(updated);
         setProfileDisplayName(updated.displayName);
-        setProfileNickname(updated.nickname);
+        setProfileUsername(updated.username);
         setProfileBio(updated.bio);
         setSelectedTheme(updated.backgroundTheme);
         setBackgroundTint(updated.backgroundTint);
@@ -642,6 +652,37 @@ export default function AdminPage() {
     router.push('/');
   };
 
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setError('Please enter your password to confirm deletion');
+      return;
+    }
+
+    setDeleteLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/users/me', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password: deletePassword }),
+      });
+
+      if (res.ok) {
+        router.push('/');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to delete account');
+      }
+    } catch (error) {
+      console.error('Delete account error:', error);
+      setError('Failed to delete account');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const options: Intl.DateTimeFormatOptions = {
@@ -677,7 +718,7 @@ export default function AdminPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1 style={{ fontSize: '1.35rem', fontFamily: 'var(--font-title)', fontWeight: 400 }}>
               <Link
-                href={currentUser ? `/@${currentUser.nickname}` : '/'}
+                href={currentUser ? `/@${currentUser.username}` : '/'}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1012,17 +1053,28 @@ export default function AdminPage() {
                       />
                     </div>
                     <div className="form-field" style={{ marginBottom: '0.75rem' }}>
-                      <label htmlFor="nickname">Nickname</label>
+                      <label htmlFor="username">Username</label>
                       <input
-                        id="nickname"
+                        id="username"
                         type="text"
-                        value={profileNickname}
-                        onChange={(e) => setProfileNickname(e.target.value)}
+                        value={profileUsername}
+                        onChange={(e) => {
+                          setProfileUsername(e.target.value);
+                          setUsernameError(false);
+                        }}
                         disabled={profileSaving}
                         maxLength={64}
+                        style={{
+                          borderColor: usernameError ? 'var(--error)' : undefined,
+                        }}
                       />
+                      {usernameError && (
+                        <p style={{ fontSize: '0.875rem', color: 'var(--error)', marginTop: '0.5rem' }}>
+                          Username already in use
+                        </p>
+                      )}
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
-                        Profile URL: <code>/@{profileNickname || currentUser?.nickname || 'nickname'}</code>
+                        Profile URL: <code>/@{profileUsername || currentUser?.username || 'username'}</code>
                       </p>
                     </div>
 
@@ -1073,7 +1125,7 @@ export default function AdminPage() {
                   <ButtonRow>
                     {currentUser && (
                       <Link
-                        href={`/@${currentUser.nickname}`}
+                        href={`/@${currentUser.username}`}
                         className="btn btn-outline"
                       >
                         View Public Profile
@@ -1199,6 +1251,42 @@ export default function AdminPage() {
                   </ButtonRow>
                 </form>
               </div>
+
+              <div className="card" style={{ borderColor: 'rgba(255, 100, 100, 0.3)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div>
+                    <h3 className="settings-section" style={{ color: 'rgb(255, 120, 120)' }}>Danger Zone</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '1rem' }}>
+                      These actions are permanent and cannot be undone.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{
+                        padding: '1rem',
+                        background: 'rgba(255, 100, 100, 0.08)',
+                        borderRadius: '0.5rem',
+                        border: '1px solid rgba(255, 100, 100, 0.2)'
+                      }}>
+                        <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Delete Account</h4>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                          Permanently delete your account, all your whispers, and associated data. This action cannot be undone.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowDeleteModal(true)}
+                          className="btn"
+                          style={{
+                            background: 'rgba(255, 100, 100, 0.15)',
+                            border: '1px solid rgba(255, 100, 100, 0.4)',
+                            color: 'rgb(255, 150, 150)'
+                          }}
+                        >
+                          Delete My Account
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1226,10 +1314,10 @@ export default function AdminPage() {
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.35rem' }}>Top voices (whispers)</p>
                       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                         {(stats?.topActive ?? []).map((user) => (
-                          <li key={`active-${user.nickname}`}>
-                            <Link href={`/@${user.nickname}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
+                          <li key={`active-${user.username}`}>
+                            <Link href={`/@${user.username}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
                               <span style={{ fontWeight: 500 }}>{user.displayName}</span>
-                              <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.4rem' }}>@{user.nickname}</span>
+                              <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.4rem' }}>@{user.username}</span>
                             </Link>
                             <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.35rem', fontSize: '0.8rem' }}>
                               {user.postCount ?? 0} whispers
@@ -1248,10 +1336,10 @@ export default function AdminPage() {
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.35rem' }}>Newest arrivals</p>
                       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                         {(stats?.recentUsers ?? []).map((user) => (
-                          <li key={`recent-${user.nickname}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                            <Link href={`/@${user.nickname}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
+                          <li key={`recent-${user.username}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                            <Link href={`/@${user.username}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
                               <span style={{ fontWeight: 500 }}>{user.displayName}</span>
-                              <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.4rem' }}>@{user.nickname}</span>
+                              <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.4rem' }}>@{user.username}</span>
                             </Link>
                             {user.email && (
                               <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -1544,7 +1632,7 @@ export default function AdminPage() {
                             if (!IconComponent) return null;
                             return (
                               <button
-                                key={name}
+                                key={`${category}-${name}`}
                                 type="button"
                                 onClick={() => {
                                   setSelectedIcon(name);
@@ -1618,6 +1706,114 @@ export default function AdminPage() {
             }
           }}
         />
+      )}
+
+      {showDeleteModal && (
+        <>
+          <div
+            className="modal-overlay"
+            onClick={() => {
+              setShowDeleteModal(false);
+              setDeletePassword('');
+              setError('');
+            }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.8)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          />
+          <div
+            className="modal-container"
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'rgba(20, 22, 30, 0.98)',
+              border: '1px solid rgba(255, 100, 100, 0.3)',
+              borderRadius: '0.75rem',
+              padding: '2rem',
+              width: '90%',
+              maxWidth: '24rem',
+              zIndex: 1001,
+            }}
+          >
+            <h3 style={{ marginBottom: '1rem', color: 'rgb(255, 120, 120)' }}>Delete Account</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+              This will permanently delete:
+            </p>
+            <ul style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
+              <li>Your account and profile</li>
+              <li>All your whispers</li>
+              <li>Your settings and preferences</li>
+            </ul>
+            <p style={{ color: 'rgb(255, 150, 150)', marginBottom: '1.5rem', fontWeight: 500 }}>
+              This action cannot be undone.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleDeleteAccount();
+              }}
+            >
+              <div className="form-field">
+                <label htmlFor="delete-password">Enter your password to confirm</label>
+                <input
+                  id="delete-password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Password"
+                  required
+                  disabled={deleteLoading}
+                  autoFocus
+                />
+              </div>
+
+              {error && (
+                <div className="error-message" style={{ marginBottom: '1rem' }}>
+                  {error}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeletePassword('');
+                    setError('');
+                  }}
+                  className="btn btn-outline"
+                  disabled={deleteLoading}
+                  style={{ flex: 1 }}
+                >Cancel</button>
+                <button
+                  type="submit"
+                  className="btn"
+                  disabled={deleteLoading || !deletePassword}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255, 100, 100, 0.2)',
+                    border: '1px solid rgba(255, 100, 100, 0.5)',
+                    color: 'rgb(255, 180, 180)',
+                  }}
+                >
+                  {deleteLoading ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </>
       )}
     </BackgroundProvider>
   );

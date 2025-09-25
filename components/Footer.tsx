@@ -42,8 +42,8 @@ export async function Footer() {
             {isAdmin && (
               <>
                 <span style={{ opacity: 0.6 }}>·</span>
-                <Link href="/admin" style={{ color: 'inherit' }}>
-                  Admin
+                <Link href="/dashboard" style={{ color: 'inherit' }}>
+                  Dashboard
                 </Link>
               </>
             )}

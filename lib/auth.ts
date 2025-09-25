@@ -9,7 +9,6 @@ export interface TokenPayload {
   username: string;
   email: string;
   displayName: string;
-  nickname: string;
   role: 'admin' | 'user';
 }
 

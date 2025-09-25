@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
+import Post from '@/models/Post';
+import Settings from '@/models/Settings';
 import { checkAuth, generateToken, setAuthCookie } from '@/lib/auth';
-import { generateUniqueNickname, sanitizeDisplayName, slugifyNickname } from '@/lib/users';
+import { sanitizeDisplayName } from '@/lib/users';
 import { BACKGROUND_THEMES, BACKGROUND_TINTS, DEFAULT_BACKGROUND_THEME, DEFAULT_BACKGROUND_TINT } from '@/lib/backgroundThemes';
 import { DEFAULT_ASCII_ART_BANNER } from '@/lib/siteDefaults';
+import bcrypt from 'bcryptjs';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +29,7 @@ export async function GET(request: NextRequest) {
         username: user.username,
         email: user.email,
         displayName: user.displayName,
-        nickname: user.nickname,
+        username: user.username,
         bio: user.bio ?? '',
         backgroundTheme: user.backgroundTheme ?? DEFAULT_BACKGROUND_THEME,
         backgroundTint: user.backgroundTint ?? DEFAULT_BACKGROUND_TINT,
@@ -48,7 +51,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { displayName, nickname, bio, backgroundTheme, backgroundTint, asciiArtBanner } = await request.json();
+    const { displayName, username, bio, backgroundTheme, backgroundTint, asciiArtBanner } = await request.json();
 
     await connectToDatabase();
 
@@ -65,22 +68,19 @@ export async function PUT(request: NextRequest) {
       user.bio = bio.trim().slice(0, 280);
     }
 
-    if (typeof nickname === 'string') {
-      const desired = slugifyNickname(nickname);
+    if (typeof username === 'string') {
+      const desired = username.toLowerCase().trim();
       if (!desired) {
-        return NextResponse.json({ error: 'Nickname cannot be empty' }, { status: 400 });
+        return NextResponse.json({ error: 'Username cannot be empty' }, { status: 400 });
       }
 
-      if (desired !== user.nickname) {
-        const existing = await User.findOne({ nickname: desired });
+      if (desired !== user.username) {
+        const existing = await User.findOne({ username: desired });
         if (existing && existing._id.toString() !== user._id.toString()) {
-          return NextResponse.json({ error: 'Nickname already in use' }, { status: 409 });
+          return NextResponse.json({ error: 'Username already in use' }, { status: 409 });
         }
-        user.nickname = desired;
+        user.username = desired;
       }
-    } else if (!user.nickname) {
-      // Ensure a nickname exists
-      user.nickname = await generateUniqueNickname(user.displayName);
     }
 
     if (typeof backgroundTheme === 'string' && backgroundTheme in BACKGROUND_THEMES) {
@@ -105,7 +105,6 @@ export async function PUT(request: NextRequest) {
       username: user.username,
       email: user.email,
       displayName: user.displayName,
-      nickname: user.nickname,
       role: user.role,
     });
 
@@ -116,7 +115,7 @@ export async function PUT(request: NextRequest) {
         username: user.username,
         email: user.email,
         displayName: user.displayName,
-        nickname: user.nickname,
+        username: user.username,
         bio: user.bio ?? '',
         backgroundTheme: user.backgroundTheme ?? DEFAULT_BACKGROUND_THEME,
         backgroundTint: user.backgroundTint ?? DEFAULT_BACKGROUND_TINT,
@@ -130,5 +129,66 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Update current user error:', error);
     return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await checkAuth(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { password } = await request.json();
+
+    if (!password) {
+      return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+    }
+
+    await connectToDatabase();
+
+    // Verify user exists and password is correct
+    const user = await User.findById(auth.userId);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
+    }
+
+    // Delete all user's posts
+    await Post.deleteMany({ userId: user._id });
+
+    // If user is admin and owns settings, clear the owner field
+    if (user.role === 'admin') {
+      await Settings.updateMany(
+        { owner: user._id },
+        { $unset: { owner: 1 } }
+      );
+    }
+
+    // Delete the user account
+    await User.deleteOne({ _id: user._id });
+
+    // Clear the auth cookie
+    const response = NextResponse.json({
+      success: true,
+      message: 'Account deleted successfully'
+    });
+
+    response.cookies.set('midnight-auth', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0, // Expire immediately
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Delete account error:', error);
+    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
   }
 }

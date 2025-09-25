@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
           _id: 0,
           userId: '$_id',
           postCount: 1,
-          nickname: '$user.nickname',
+          username: '$user.username',
           displayName: '$user.displayName',
           createdAt: '$user.createdAt',
         },
@@ -53,14 +53,14 @@ export async function GET(request: NextRequest) {
     const recentUsersDocs = await User.find()
       .sort({ createdAt: -1 })
       .limit(5)
-      .select('nickname displayName email createdAt emailVerified')
+      .select('username displayName email createdAt emailVerified')
       .lean();
 
     const recentUsers = recentUsersDocs.map((user) => ({
-      nickname: user.nickname,
+      username: user.username,
       displayName: user.displayName,
       email: user.email,
-      emailVerified: user.emailVerified || false,
+      emailVerified: user.emailVerified !== false, // Treat undefined (legacy accounts) as verified
       createdAt: user.createdAt,
     }));
 
