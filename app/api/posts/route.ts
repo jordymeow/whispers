@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       baseQuery.userId = authorUser._id;
     }
 
-    if (includeDrafts && viewer?.role !== 'admin') {
+    if (includeDrafts && viewer && viewer.role !== 'admin') {
       baseQuery.userId = new mongoose.Types.ObjectId(viewer.userId);
     }
 
