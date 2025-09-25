@@ -53,12 +53,14 @@ export async function GET(request: NextRequest) {
     const recentUsersDocs = await User.find()
       .sort({ createdAt: -1 })
       .limit(5)
-      .select('nickname displayName createdAt')
+      .select('nickname displayName email createdAt emailVerified')
       .lean();
 
     const recentUsers = recentUsersDocs.map((user) => ({
       nickname: user.nickname,
       displayName: user.displayName,
+      email: user.email,
+      emailVerified: user.emailVerified || false,
       createdAt: user.createdAt,
     }));
 

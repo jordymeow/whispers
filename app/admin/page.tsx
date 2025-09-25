@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Toast } from '@/components/Toast';
+import { EmailChangeModal } from '@/components/EmailChangeModal';
 import {
   icons,
   type LucideIcon,
@@ -54,6 +55,7 @@ interface Post {
 interface CurrentUser {
   userId: string;
   username: string;
+  email: string;
   displayName: string;
   nickname: string;
   bio: string;
@@ -66,6 +68,8 @@ interface CurrentUser {
 interface AdminStatsUserSummary {
   nickname: string;
   displayName: string;
+  email?: string;
+  emailVerified?: boolean;
   createdAt: string;
   postCount?: number;
 }
@@ -102,6 +106,7 @@ function normalizeCurrentUser(user: any): CurrentUser {
   return {
     userId: user.userId,
     username: user.username,
+    email: user.email,
     displayName: user.displayName,
     nickname: user.nickname,
     bio: user.bio ?? '',
@@ -144,6 +149,7 @@ export default function AdminPage() {
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<IconColorName>(DEFAULT_ICON_COLOR);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showEmailChangeModal, setShowEmailChangeModal] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState('');
@@ -671,7 +677,7 @@ export default function AdminPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1 style={{ fontSize: '1.35rem', fontFamily: 'var(--font-title)', fontWeight: 400 }}>
               <Link
-                href={currentUser ? `/u/${currentUser.nickname}` : '/'}
+                href={currentUser ? `/@${currentUser.nickname}` : '/'}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -842,7 +848,7 @@ export default function AdminPage() {
                     <ButtonRow gap="1rem">
                       <button
                         type="button"
-                        className="btn-outline"
+                        className="btn btn-outline"
                         onClick={(e) => handleSavePost(e, true)}
                         disabled={loading || !newPost.trim()}
                         style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
@@ -851,7 +857,7 @@ export default function AdminPage() {
                       </button>
                       <button
                         type="submit"
-                        className="btn-soft"
+                        className="btn btn-soft"
                         style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
                         disabled={loading || !newPost.trim()}
                       >
@@ -862,7 +868,7 @@ export default function AdminPage() {
                     <ButtonRow gap="1rem">
                       <button
                         type="submit"
-                        className="btn-soft"
+                        className="btn btn-soft"
                         style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
                         disabled={loading || !newPost.trim()}
                       >
@@ -874,7 +880,7 @@ export default function AdminPage() {
                   <ButtonRow gap="1rem">
                     <button
                       type="button"
-                      className="btn-outline"
+                      className="btn btn-outline"
                       onClick={(e) => handleSavePost(e, true)}
                       disabled={loading || !newPost.trim()}
                       style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
@@ -883,7 +889,7 @@ export default function AdminPage() {
                     </button>
                     <button
                       type="submit"
-                      className="btn-soft"
+                      className="btn btn-soft"
                       style={{ opacity: !newPost.trim() ? 0.5 : 1 }}
                       disabled={loading || !newPost.trim()}
                     >
@@ -919,14 +925,14 @@ export default function AdminPage() {
                         <ButtonRow>
                           <button
                             onClick={() => handleStartEdit(post)}
-                            className="btn-outline"
+                            className="btn btn-outline"
                             disabled={!canModifyPost(post) || deletingId === post._id}
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeletePost(post._id)}
-                            className="btn-outline"
+                            className="btn btn-outline"
                             disabled={!canModifyPost(post) || deletingId === post._id}
                             aria-busy={deletingId === post._id}
                           >
@@ -965,14 +971,14 @@ export default function AdminPage() {
                         <ButtonRow>
                           <button
                             onClick={() => handleStartEdit(post)}
-                            className="btn-outline"
+                            className="btn btn-outline"
                             disabled={!canModifyPost(post) || loading || deletingId === post._id}
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeletePost(post._id)}
-                            className="btn-outline"
+                            className="btn btn-outline"
                             style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: 'rgba(239, 68, 68, 0.9)' }}
                             disabled={!canModifyPost(post) || loading || deletingId === post._id}
                             aria-busy={deletingId === post._id}
@@ -1016,7 +1022,35 @@ export default function AdminPage() {
                         maxLength={64}
                       />
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
-                        Profile URL: <code>/u/{profileNickname || currentUser?.nickname || 'nickname'}</code>
+                        Profile URL: <code>/@{profileNickname || currentUser?.nickname || 'nickname'}</code>
+                      </p>
+                    </div>
+
+                    <div className="form-field" style={{ marginBottom: '0.75rem' }}>
+                      <label>Email</label>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem',
+                        background: 'rgba(24, 27, 40, 0.5)',
+                        borderRadius: '0.5rem',
+                        border: '1px solid rgba(158, 160, 255, 0.15)'
+                      }}>
+                        <span style={{ flex: 1, color: 'var(--text-secondary)' }}>
+                          {currentUser?.email || 'Loading...'}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          style={{ fontSize: '0.875rem', padding: '0.4rem 0.75rem' }}
+                          onClick={() => setShowEmailChangeModal(true)}
+                        >
+                          Modify
+                        </button>
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
+                        Email changes require verification
                       </p>
                     </div>
                   </div>
@@ -1039,13 +1073,13 @@ export default function AdminPage() {
                   <ButtonRow>
                     {currentUser && (
                       <Link
-                        href={`/u/${currentUser.nickname}`}
-                        className="btn-outline"
+                        href={`/@${currentUser.nickname}`}
+                        className="btn btn-outline"
                       >
                         View Public Profile
                       </Link>
                     )}
-                    <button type="submit" className="btn-soft" disabled={profileSaving}>
+                    <button type="submit" className="btn btn-soft" disabled={profileSaving}>
                       {profileSaving ? 'Saving…' : 'Save Profile'}
                     </button>
                   </ButtonRow>
@@ -1154,12 +1188,12 @@ export default function AdminPage() {
                         setBackgroundTint(DEFAULT_BACKGROUND_TINT);
                         setAsciiArt(DEFAULT_ASCII_ART_BANNER);
                       }}
-                      className="btn-outline"
+                      className="btn btn-outline"
                       disabled={appearanceSaving}
                     >
                       Reset Appearance
                     </button>
-                    <button type="submit" className="btn-soft" disabled={appearanceSaving}>
+                    <button type="submit" className="btn btn-soft" disabled={appearanceSaving}>
                       {appearanceSaving ? 'Saving…' : 'Save Appearance'}
                     </button>
                   </ButtonRow>
@@ -1193,7 +1227,7 @@ export default function AdminPage() {
                       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                         {(stats?.topActive ?? []).map((user) => (
                           <li key={`active-${user.nickname}`}>
-                            <Link href={`/u/${user.nickname}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
+                            <Link href={`/@${user.nickname}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
                               <span style={{ fontWeight: 500 }}>{user.displayName}</span>
                               <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.4rem' }}>@{user.nickname}</span>
                             </Link>
@@ -1210,17 +1244,34 @@ export default function AdminPage() {
                       </ul>
                     </div>
 
-                    <div style={{ flex: '1 1 220px' }}>
+                    <div style={{ flex: '1 1 320px' }}>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '0.35rem' }}>Newest arrivals</p>
-                      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                         {(stats?.recentUsers ?? []).map((user) => (
-                          <li key={`recent-${user.nickname}`}>
-                            <Link href={`/u/${user.nickname}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
+                          <li key={`recent-${user.nickname}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                            <Link href={`/@${user.nickname}`} style={{ color: 'var(--text-primary)', textDecoration: 'none' }}>
                               <span style={{ fontWeight: 500 }}>{user.displayName}</span>
                               <span style={{ color: 'var(--text-tertiary)', marginLeft: '0.4rem' }}>@{user.nickname}</span>
                             </Link>
+                            {user.email && (
+                              <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                {user.email}
+                                {!user.emailVerified && (
+                                  <span style={{
+                                    color: 'var(--warning)',
+                                    fontSize: '0.7rem',
+                                    background: 'rgba(255, 200, 0, 0.1)',
+                                    padding: '0.1rem 0.3rem',
+                                    borderRadius: '0.25rem',
+                                    border: '1px solid rgba(255, 200, 0, 0.3)'
+                                  }}>
+                                    Unverified
+                                  </span>
+                                )}
+                              </span>
+                            )}
                             <span style={{ color: 'var(--text-tertiary)', display: 'block', fontSize: '0.75rem' }}>
-                              {new Date(user.createdAt).toLocaleDateString('en-US', {
+                              Joined {new Date(user.createdAt).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric',
@@ -1260,7 +1311,7 @@ export default function AdminPage() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                      <button type="submit" className="btn-soft" disabled={loading}>
+                      <button type="submit" className="btn btn-soft" disabled={loading}>
                         {loading ? 'Saving…' : 'Save Analytics'}
                       </button>
                     </div>
@@ -1321,7 +1372,7 @@ export default function AdminPage() {
                     setIconSearch('');
                     setShowIconPicker(false);
                   }}
-                  className="btn-outline"
+                  className="btn btn-outline"
                   style={{ padding: '0.35rem 0.8rem', fontSize: '0.75rem' }}
                 >
                   <X size={18} />
@@ -1543,6 +1594,31 @@ export default function AdminPage() {
       )}
 
       </div>
+      {currentUser && (
+        <EmailChangeModal
+          isOpen={showEmailChangeModal}
+          currentEmail={currentUser.email}
+          onClose={() => setShowEmailChangeModal(false)}
+          onSuccess={async (newEmail) => {
+            // Update the current user state with new email
+            setCurrentUser({ ...currentUser, email: newEmail });
+            setToast({ message: 'Email updated successfully', type: 'success' });
+
+            // Reload user data to get updated JWT token info
+            try {
+              const res = await fetch('/api/users/me', { credentials: 'include' });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.user) {
+                  setCurrentUser(normalizeCurrentUser(data.user));
+                }
+              }
+            } catch (err) {
+              console.error('Failed to reload user data:', err);
+            }
+          }}
+        />
+      )}
     </BackgroundProvider>
   );
 }

@@ -1,3 +1,4 @@
+import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 
 export function slugifyNickname(input: string): string {
@@ -25,4 +26,15 @@ export async function generateUniqueNickname(base: string): Promise<string> {
 export function sanitizeDisplayName(name: string): string {
   const trimmed = name.trim();
   return trimmed.length > 0 ? trimmed : 'Unnamed Dreamer';
+}
+
+export async function getUser(nickname: string) {
+  try {
+    await connectToDatabase();
+    const user = await User.findOne({ nickname }).select('-password');
+    return user;
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return null;
+  }
 }

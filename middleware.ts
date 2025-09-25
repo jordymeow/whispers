@@ -3,6 +3,13 @@ import type { NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
+  // Handle @ profile routes by rewriting to /u/[nickname]
+  if (path.startsWith('/@')) {
+    const nickname = path.slice(2); // Remove /@ to get just the nickname
+    console.log('Middleware: Rewriting', path, 'to', `/u/${nickname}`);
+    return NextResponse.rewrite(new URL(`/u/${nickname}`, request.url));
+  }
+
   // Only protect admin routes
   if (path.startsWith('/admin')) {
     try {
@@ -23,5 +30,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

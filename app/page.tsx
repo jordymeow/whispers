@@ -290,7 +290,7 @@ export default function Home() {
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             <Link href={isAuthenticated ? '/admin' : '/register'} className="btn btn-primary" style={{ minWidth: '10rem' }}>
-              {isAuthenticated ? 'Open Studio' : 'Create Account'}
+              {isAuthenticated ? 'Write a Whisper' : 'Create Account'}
             </Link>
             {!isAuthenticated && (
               <Link href="/login" className="btn btn-outline" style={{ minWidth: '10rem' }}>

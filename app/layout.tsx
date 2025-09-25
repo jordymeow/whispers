@@ -3,7 +3,7 @@ import { Footer } from '@/components/Footer';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: "Midnight Whispers",
+  title: "Whispers",
   description: "Thoughts in the quiet hours",
 };
 

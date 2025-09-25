@@ -277,7 +277,7 @@ export function ProfileFeed({ posts, ownerName, siteName, ownerNickname, canComp
       {canCompose && !expandedId && (
         <button
           onClick={() => setShowCompose((prev) => !prev)}
-          className="btn-soft"
+          className="btn btn-soft"
           style={{
             position: 'fixed',
             top: '2rem',

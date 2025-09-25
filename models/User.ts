@@ -17,6 +17,13 @@ export interface IUser extends Document {
   backgroundTint?: BackgroundTint;
   asciiArtBanner?: string;
   role: UserRole;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  emailVerified?: boolean;
+  emailVerificationToken?: string;
+  pendingEmail?: string;
+  pendingEmailCode?: string;
+  pendingEmailExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -78,6 +85,34 @@ const UserSchema = new Schema<IUser>({
     type: String,
     enum: ['admin', 'user'],
     default: 'user',
+  },
+  resetPasswordToken: {
+    type: String,
+    default: undefined,
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: undefined,
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerificationToken: {
+    type: String,
+    default: undefined,
+  },
+  pendingEmail: {
+    type: String,
+    default: undefined,
+  },
+  pendingEmailCode: {
+    type: String,
+    default: undefined,
+  },
+  pendingEmailExpires: {
+    type: Date,
+    default: undefined,
   },
 }, {
   timestamps: true,

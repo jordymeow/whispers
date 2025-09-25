@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌙 Whispers
+
+A quiet corner of the internet for thoughtful souls to share their stories, one whisper at a time.
+
+## What is Whispers?
+
+Whispers is a minimalist social blogging platform where brevity meets beauty. In a world of noise and endless scrolling, we've created a space for intimate, thoughtful expression—limited to 1000 characters per whisper, encouraging you to distill your thoughts to their essence.
+
+### ✨ Key Features
+
+**Whispers, Not Shouts**
+Share your thoughts in beautifully crafted posts called "whispers"—each one limited to 1000 characters, adorned with custom icons and colors that match your mood.
+
+**Personal Spaces**
+Every user gets their own corner at `whispers.cloud/@yourname` where visitors can discover your collection of whispers, read your bio, and experience your unique aesthetic.
+
+**Aesthetic Customization**
+- Choose from multiple animated backgrounds (particles, dots, lines)
+- Tint your entire space with your favorite color
+- Add ASCII art banners to make your profile uniquely yours
+- Select from over 1000 icons to accompany each whisper
+
+**Draft & Publish**
+Take your time crafting the perfect whisper. Save drafts, refine your thoughts, and publish when the moment feels right.
+
+**Thoughtful Design**
+- Immersive modal reading experience with automatic progression
+- Elegant animations and transitions
+- Mobile-first responsive design
+- Dark, calming interface perfect for late-night musings
+
+## The Philosophy
+
+Whispers isn't trying to be another social network. It's a return to the early days of the personal web—when having a space online meant something, when every post was crafted with care, and when finding someone's page felt like discovering a secret garden.
+
+We believe in:
+- **Quality over quantity** - Better to whisper one meaningful thought than shout into the void
+- **Personal expression** - Your space should feel like yours
+- **Intimate scale** - Not everything needs to go viral
+- **Aesthetic intention** - Beautiful things deserve beautiful presentation
+
+## For Whom?
+
+Whispers is for:
+- Night owls who do their best thinking after midnight
+- Writers seeking a minimalist platform for micro-fiction
+- Poets who paint with words
+- Thinkers who value depth over reach
+- Anyone tired of algorithmic feeds and engagement metrics
+- Those who miss the old internet's sense of discovery and personality
+
+## Technical Details
+
+Built with modern web technologies for a smooth, reliable experience:
+- Next.js 15 with React 19 for blazing-fast performance
+- MongoDB for data persistence
+- JWT authentication for secure, private accounts
+- Tailwind CSS v4 for beautiful, responsive design
+- TypeScript for robust, maintainable code
 
 ## Getting Started
 
-First, run the development server:
+Visit [whispers.cloud](https://whispers.cloud) to create your account and claim your corner of the quiet web.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+*"In the depth of winter, I finally learned that there was in me an invincible summer."*
+*— Albert Camus*
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Welcome to Whispers. We've been waiting for you. 🌙

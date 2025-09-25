@@ -122,7 +122,7 @@ export default function RegisterPage() {
     <div className="page-center">
       <div style={{ width: '100%', maxWidth: '24rem' }}>
         <div className="page-header">
-          <h1>Join the Whispers</h1>
+          <h1>Join Whispers</h1>
           <p>Create your account to share quietly</p>
         </div>
 

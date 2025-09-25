@@ -113,6 +113,12 @@ export default function LoginPage() {
                 'Login'
               )}
             </button>
+
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <Link href="/forgot-password" className="nav-link" style={{ fontSize: '0.875rem' }}>
+                Forgot your password?
+              </Link>
+            </div>
           </form>
         </div>
 
