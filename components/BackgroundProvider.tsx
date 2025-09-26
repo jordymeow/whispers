@@ -72,22 +72,18 @@ export function BackgroundProvider({ backgroundTheme, backgroundTint = 'none', c
       }
     }
 
-    if (theme.size) {
+    if ('size' in theme && theme.size) {
       document.body.style.backgroundSize = theme.size;
     } else {
       document.body.style.backgroundSize = 'cover';
     }
 
-    if (theme.overlay) {
+    if ('overlay' in theme && theme.overlay) {
       document.body.style.backgroundImage = `${theme.overlay}, ${theme.style}`;
     }
 
-    // Apply animation if present
-    if ('animation' in theme && theme.animation) {
-      document.body.style.animation = theme.animation;
-    } else {
-      document.body.style.animation = '';
-    }
+    // Clear any existing animation
+    document.body.style.animation = '';
 
     // Cleanup - restore dark background
     return () => {

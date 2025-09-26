@@ -107,7 +107,6 @@ function normalizeCurrentUser(user: any): CurrentUser {
     username: user.username,
     email: user.email,
     displayName: user.displayName,
-    username: user.username,
     bio: user.bio ?? '',
     role: user.role,
     backgroundTheme: theme,

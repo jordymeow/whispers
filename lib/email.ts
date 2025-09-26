@@ -29,13 +29,16 @@ export async function sendEmail({ to, subject, text, html }: EmailOptions): Prom
   }
 
   try {
-    const result = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+    const messageData: any = {
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to: [to],
       subject,
-      text,
-      html
-    });
+    };
+
+    if (text) messageData.text = text;
+    if (html) messageData.html = html;
+
+    const result = await mg.messages.create(process.env.MAILGUN_DOMAIN, messageData);
 
     console.log('Email sent successfully:', result.id);
     return true;

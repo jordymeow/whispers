@@ -168,8 +168,8 @@ export function BackgroundEffects({ type }: EffectProps) {
       case 'constellation': {
         // Pick 2-3 random constellations
         const numConstellations = Math.floor(Math.random() * 2) + 2;
-        const selectedConstellations = [];
-        const usedIndices = new Set();
+        const selectedConstellations: typeof CONSTELLATIONS[number][] = [];
+        const usedIndices = new Set<number>();
 
         for (let i = 0; i < numConstellations && i < CONSTELLATIONS.length; i++) {
           let index;
@@ -181,7 +181,7 @@ export function BackgroundEffects({ type }: EffectProps) {
         }
 
         // Generate random background stars once
-        const backgroundStars = [];
+        const backgroundStars: { x: number; y: number; size: number; brightness: number }[] = [];
         for (let i = 0; i < 100; i++) {
           backgroundStars.push({
             x: Math.random() * canvas.width,
