@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       bio: user.bio,
       backgroundTint: user.backgroundTint,
       asciiArtBanner: user.asciiArtBanner,
-      profileUrl: `/u/${user.username}`
+      profileUrl: `/@${user.username}`
     }));
 
     return NextResponse.json({

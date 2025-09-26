@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
       requiresVerification: true,
       userId: user._id.toString(),
       email: user.email,
+      username: user.username,
       // Include obfuscated code for testing (multiply by 2 to "encrypt")
       _testCode: parseInt(verificationCode) * 2,
     });

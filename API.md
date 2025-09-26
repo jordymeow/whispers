@@ -481,7 +481,7 @@ Search for users by username or display name.
       "displayName": "John Doe",
       "bio": "Software developer",
       "backgroundTint": "purple",
-      "profileUrl": "/u/johndoe"
+      "profileUrl": "/@johndoe"
     }
   ],
   "count": 1

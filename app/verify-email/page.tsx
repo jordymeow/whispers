@@ -11,11 +11,16 @@ function VerifyEmailContent() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
 
   useEffect(() => {
     const emailParam = searchParams.get('email');
+    const usernameParam = searchParams.get('username');
     if (emailParam) {
       setEmail(emailParam);
+      if (usernameParam) {
+        setUsername(usernameParam);
+      }
     } else {
       router.push('/register');
     }
@@ -83,7 +88,14 @@ function VerifyEmailContent() {
         <div className="page-header">
           <h1>Verify Email</h1>
           {email && (
-            <p>We sent a 6-digit code to {email}</p>
+            <>
+              <p>We sent a 6-digit code to {email}</p>
+              {username && (
+                <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', opacity: 0.8 }}>
+                  Your username: <strong>@{username}</strong>
+                </p>
+              )}
+            </>
           )}
         </div>
 

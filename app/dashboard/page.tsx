@@ -716,7 +716,7 @@ export default function AdminPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1 style={{ fontSize: '1.35rem', fontFamily: 'var(--font-title)', fontWeight: 400 }}>
               <Link
-                href={currentUser ? `/u/${currentUser.username}` : '/'}
+                href={currentUser ? `/@${currentUser.username}` : '/'}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

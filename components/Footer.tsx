@@ -40,7 +40,7 @@ export async function Footer() {
             {isAuthenticated && (
               <>
                 <span style={{ opacity: 0.6 }}>·</span>
-                <Link href={`/u/${viewer.username}`} style={{ color: 'inherit' }}>
+                <Link href={`/@${viewer.username}`} style={{ color: 'inherit' }}>
                   Profile
                 </Link>
                 <span style={{ opacity: 0.6 }}>·</span>

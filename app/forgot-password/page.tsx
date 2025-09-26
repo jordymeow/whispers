@@ -62,7 +62,6 @@ export default function ForgotPasswordPage() {
           </div>
 
           <div className="card" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>📧</div>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
               If an account exists for <strong>{email}</strong>, you'll receive an email with instructions to reset your password.
             </p>

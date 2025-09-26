@@ -86,7 +86,7 @@ export default function RegisterPage() {
       }
 
       if (data.requiresVerification) {
-        router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+        router.push(`/verify-email?email=${encodeURIComponent(data.email)}&username=${encodeURIComponent(data.username)}`);
       } else if (data.redirectTo) {
         // First user (admin) - direct login
         router.push(data.redirectTo);
