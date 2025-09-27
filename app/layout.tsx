@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Footer } from '@/components/Footer';
+import { Navigation } from '@/components/Navigation';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -14,11 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <body style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {children}
-        </div>
-        <Footer />
+      <body style={{ minHeight: '100vh' }}>
+        <Navigation />
+        {children}
       </body>
     </html>
   );

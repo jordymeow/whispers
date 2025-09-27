@@ -33,6 +33,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ username: string; displayName: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   const [timerProgress, setTimerProgress] = useState(0);
@@ -87,6 +88,23 @@ export default function Home() {
       });
       const data = await res.json();
       setIsAuthenticated(data.authenticated);
+
+      // If authenticated, fetch user details
+      if (data.authenticated) {
+        const userRes = await fetch('/api/users/me', {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData?.user) {
+            setCurrentUser({
+              username: userData.user.username,
+              displayName: userData.user.displayName,
+            });
+          }
+        }
+      }
     } catch (error) {
       console.error('Auth check failed:', error);
     }
@@ -297,8 +315,8 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link href={isAuthenticated ? '/dashboard' : '/register'} className="btn btn-primary" style={{ minWidth: '10rem' }}>
-              {isAuthenticated ? 'Write a Whisper' : 'Create Account'}
+            <Link href={isAuthenticated ? `/@${currentUser?.username || ''}` : '/register'} className="btn btn-primary" style={{ minWidth: '10rem' }}>
+              {isAuthenticated ? "Let's relax" : 'Create Account'}
             </Link>
             {!isAuthenticated && (
               <Link href="/login" className="btn btn-outline" style={{ minWidth: '10rem' }}>
