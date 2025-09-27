@@ -135,7 +135,7 @@ export default function DashboardClient() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const searchParams = useSearchParams();
-  const tabFromUrl = searchParams.get('tab') as 'drafts' | 'published' | 'compose' | 'profile' | 'admin';
+  const tabFromUrl = searchParams.get('tab') as 'whispers' | 'compose' | 'profile' | 'admin';
   const activeTab = tabFromUrl || 'compose';
 
   // Redirect to compose tab if no tab is specified
@@ -476,7 +476,7 @@ export default function DashboardClient() {
 
       resetComposer();
       fetchPosts();
-      router.push(`/dashboard?tab=${isDraft ? 'drafts' : 'published'}`);
+      router.push('/dashboard?tab=whispers');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -503,7 +503,7 @@ export default function DashboardClient() {
   const handleCancelEdit = () => {
     resetComposer();
     setError('');
-    router.push('/dashboard?tab=published');
+    router.push('/dashboard?tab=whispers');
   };
 
   useEffect(() => {
@@ -512,7 +512,7 @@ export default function DashboardClient() {
       if (event.key === 'Escape') {
         resetComposer();
         setError('');
-        router.push('/dashboard?tab=published');
+        router.push('/dashboard?tab=whispers');
       }
     };
     document.addEventListener('keydown', handler);
@@ -705,8 +705,7 @@ export default function DashboardClient() {
         displayName={currentUser?.displayName || 'Dashboard'}
         subtitle={
           activeTab === 'compose' ? 'Compose' :
-          activeTab === 'drafts' ? 'Drafts' :
-          activeTab === 'published' ? 'Published' :
+          activeTab === 'whispers' ? 'Whispers' :
           activeTab === 'profile' ? 'Settings' :
           activeTab === 'admin' ? 'Admin' :
           undefined
@@ -871,128 +870,84 @@ export default function DashboardClient() {
             </div>
           )}
 
-          {activeTab === 'drafts' && (
+          {activeTab === 'whispers' && (
             <div className="admin-tab-content">
-              {posts.filter(p => p.isDraft).length === 0 ? (
-                <p style={{ color: 'var(--text-secondary)' }}>No drafts yet...</p>
+              {posts.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)' }}>No whispers yet...</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {posts.filter(p => p.isDraft).map((post) => (
-                    <WhisperCard
-                      key={post._id}
-                      whisper={{
-                        id: post._id,
-                        content: post.content,
-                        date: post.date,
-                        icon: post.icon,
-                        color: post.color,
-                        formattedDate: formatDate(post.date),
-                        authorName: post.author?.displayName,
-                      }}
-                      highlight={editingPost?._id === post._id}
-                      showAuthor={Boolean(post.author)}
-                      actions={(
-                        <ButtonRow>
-                          <button
-                            onClick={() => handleStartEdit(post)}
-                            className="btn"
-                            disabled={!canModifyPost(post) || deletingId === post._id}
-                            style={{
-                              background: 'rgba(158, 160, 255, 0.2)',
-                              border: '1px solid rgba(158, 160, 255, 0.5)',
-                              color: 'rgba(210, 214, 239, 0.95)',
-                              fontSize: '0.875rem',
-                              padding: '0.6rem 1.2rem',
-                              fontWeight: 500,
-                              borderRadius: '0.5rem',
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeletePost(post._id)}
-                            className="btn"
-                            style={{
-                              background: 'rgba(239, 68, 68, 0.2)',
-                              border: '1px solid rgba(239, 68, 68, 0.5)',
-                              color: 'rgb(255, 180, 180)',
-                              fontSize: '0.875rem',
-                              padding: '0.6rem 1.2rem',
-                              fontWeight: 500,
-                              borderRadius: '0.5rem',
-                            }}
-                            disabled={!canModifyPost(post) || deletingId === post._id}
-                            aria-busy={deletingId === post._id}
-                          >
-                            {deletingId === post._id ? 'Deleting…' : 'Delete'}
-                          </button>
-                        </ButtonRow>
+                  {posts.map((post) => (
+                    <div key={post._id} style={{ position: 'relative' }}>
+                      {post.isDraft && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '0.75rem',
+                          right: '0.75rem',
+                          background: 'rgba(158, 160, 255, 0.2)',
+                          border: '1px solid rgba(158, 160, 255, 0.4)',
+                          borderRadius: '0.375rem',
+                          padding: '0.25rem 0.625rem',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          color: 'rgba(210, 214, 239, 0.95)',
+                          zIndex: 1,
+                        }}>
+                          Draft
+                        </div>
                       )}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'published' && (
-            <div className="admin-tab-content">
-              {posts.filter(p => !p.isDraft).length === 0 ? (
-                <p style={{ color: 'var(--text-secondary)' }}>No published whispers yet...</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {posts.filter(p => !p.isDraft).map((post) => (
-                    <WhisperCard
-                      key={post._id}
-                      whisper={{
-                        id: post._id,
-                        content: post.content,
-                        date: post.date,
-                        icon: post.icon,
-                        color: post.color,
-                        formattedDate: formatDate(post.date),
-                        authorName: post.author?.displayName,
-                      }}
-                      highlight={editingPost?._id === post._id}
-                      showAuthor={Boolean(post.author)}
-                      actions={(
-                        <ButtonRow>
-                          <button
-                            onClick={() => handleStartEdit(post)}
-                            className="btn"
-                            disabled={!canModifyPost(post) || loading || deletingId === post._id}
-                            style={{
-                              background: 'rgba(158, 160, 255, 0.2)',
-                              border: '1px solid rgba(158, 160, 255, 0.5)',
-                              color: 'rgba(210, 214, 239, 0.95)',
-                              fontSize: '0.875rem',
-                              padding: '0.6rem 1.2rem',
-                              fontWeight: 500,
-                              borderRadius: '0.5rem',
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeletePost(post._id)}
-                            className="btn"
-                            style={{
-                              background: 'rgba(239, 68, 68, 0.2)',
-                              border: '1px solid rgba(239, 68, 68, 0.5)',
-                              color: 'rgb(255, 180, 180)',
-                              fontSize: '0.875rem',
-                              padding: '0.6rem 1.2rem',
-                              fontWeight: 500,
-                              borderRadius: '0.5rem',
-                            }}
-                            disabled={!canModifyPost(post) || loading || deletingId === post._id}
-                            aria-busy={deletingId === post._id}
-                          >
-                            {deletingId === post._id ? 'Deleting…' : 'Delete'}
-                          </button>
-                        </ButtonRow>
-                      )}
-                    />
+                      <WhisperCard
+                        whisper={{
+                          id: post._id,
+                          content: post.content,
+                          date: post.date,
+                          icon: post.icon,
+                          color: post.color,
+                          formattedDate: formatDate(post.date),
+                          authorName: post.author?.displayName,
+                        }}
+                        highlight={editingPost?._id === post._id}
+                        showAuthor={Boolean(post.author)}
+                        actions={(
+                          <ButtonRow>
+                            <button
+                              onClick={() => handleStartEdit(post)}
+                              className="btn"
+                              disabled={!canModifyPost(post) || deletingId === post._id}
+                              style={{
+                                background: 'rgba(158, 160, 255, 0.2)',
+                                border: '1px solid rgba(158, 160, 255, 0.5)',
+                                color: 'rgba(210, 214, 239, 0.95)',
+                                fontSize: '0.875rem',
+                                padding: '0.6rem 1.2rem',
+                                fontWeight: 500,
+                                borderRadius: '0.5rem',
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeletePost(post._id)}
+                              className="btn"
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.2)',
+                                border: '1px solid rgba(239, 68, 68, 0.5)',
+                                color: 'rgb(255, 180, 180)',
+                                fontSize: '0.875rem',
+                                padding: '0.6rem 1.2rem',
+                                fontWeight: 500,
+                                borderRadius: '0.5rem',
+                              }}
+                              disabled={!canModifyPost(post) || deletingId === post._id}
+                              aria-busy={deletingId === post._id}
+                            >
+                              {deletingId === post._id ? 'Deleting…' : 'Delete'}
+                            </button>
+                          </ButtonRow>
+                        )}
+                      />
+                    </div>
                   ))}
                 </div>
               )}

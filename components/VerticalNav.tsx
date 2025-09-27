@@ -30,8 +30,8 @@ export function VerticalNav({ isAuthenticated, isAdmin, username }: VerticalNavP
 
   if (!mounted) return null;
 
-  // Don't show navigation on index page
-  if (pathname === '/') return null;
+  // Don't show navigation on index page if not authenticated
+  if (pathname === '/' && !isAuthenticated) return null;
 
   const isDashboard = pathname.startsWith('/dashboard');
   const currentTab = searchParams.get('tab') || 'compose';
@@ -39,10 +39,8 @@ export function VerticalNav({ isAuthenticated, isAdmin, username }: VerticalNavP
   // Dashboard sections (only shown when on dashboard and authenticated)
   const dashboardItems = (isDashboard && isAuthenticated) ? [
     { href: '/dashboard?tab=compose', label: 'Compose', show: true, indent: true },
-    { href: '/dashboard?tab=drafts', label: 'Drafts', show: true, indent: true },
-    { href: '/dashboard?tab=published', label: 'Published', show: true, indent: true },
+    { href: '/dashboard?tab=whispers', label: 'Whispers', show: true, indent: true },
     { href: '/dashboard?tab=profile', label: 'Settings', show: true, indent: true },
-    { href: '/dashboard?tab=admin', label: 'Admin', show: isAdmin, indent: true },
     { href: 'logout', label: 'Logout', show: true, indent: true, isButton: true },
   ].filter(item => item.show) : [];
 
@@ -52,7 +50,7 @@ export function VerticalNav({ isAuthenticated, isAdmin, username }: VerticalNavP
   // Add Home
   navStructure.push({ href: '/', label: 'Home', show: true });
 
-  // Add Profile and Search first (before Dashboard)
+  // Add Profile and Search first
   if (isAuthenticated) {
     navStructure.push({ href: username ? `/@${username}` : '#', label: 'Profile', show: true });
     navStructure.push({ href: '/search', label: 'Search', show: true });
@@ -64,6 +62,11 @@ export function VerticalNav({ isAuthenticated, isAdmin, username }: VerticalNavP
     if (isDashboard) {
       navStructure.push(...dashboardItems);
     }
+  }
+
+  // Add Admin at the same level (only for admins)
+  if (isAdmin) {
+    navStructure.push({ href: '/dashboard?tab=admin', label: 'Admin', show: true });
   }
 
   const allNavItems = navStructure.filter(item => item.show);
