@@ -73,7 +73,8 @@ export function VerticalNav({ isAuthenticated, isAdmin, username }: VerticalNavP
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    router.push('/');
+    // Force a full page reload to clear the authentication state
+    window.location.href = '/';
   };
 
   const isActive = (href: string) => {
