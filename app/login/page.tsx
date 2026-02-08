@@ -70,18 +70,13 @@ export default function LoginPage() {
         <div className="card">
           <form onSubmit={handleSubmit}>
             <div className="form-field">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="username">Username or Email</label>
               <input
                 id="username"
                 type="text"
                 value={username}
-                onChange={(e) => {
-                  const value = e.target.value.toLowerCase();
-                  // Only allow lowercase letters, numbers, and hyphens
-                  const cleaned = value.replace(/[^a-z0-9-]/g, '');
-                  setUsername(cleaned);
-                }}
-                placeholder="Your username"
+                onChange={(e) => setUsername(e.target.value.toLowerCase().trim())}
+                placeholder="Username or email"
                 autoComplete="username"
                 autoFocus
                 disabled={loading}
